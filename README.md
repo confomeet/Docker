@@ -1,0 +1,1 @@
+This repository will contain all the files related to Jitsi Meet services, as well as the rest of the services necessary to make LilacMeet2023  project Work perfectly

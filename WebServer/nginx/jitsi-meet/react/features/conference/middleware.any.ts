@@ -9,10 +9,8 @@ import { IReduxState, IStore } from '../app/types';
 import {
     CONFERENCE_FAILED,
     CONFERENCE_JOINED,
-    CONFERENCE_LEFT,
-    KICKED_OUT
+    CONFERENCE_LEFT
 } from '../base/conference/actionTypes';
-import { conferenceLeft } from '../base/conference/actions';
 import { getCurrentConference } from '../base/conference/functions';
 import { getURLWithoutParamsNormalized } from '../base/connection/utils';
 import { hideDialog } from '../base/dialog/actions';
@@ -21,7 +19,7 @@ import { getLocalizedDateFormatter } from '../base/i18n/dateUtil';
 import { translateToHTML } from '../base/i18n/functions';
 import i18next from '../base/i18n/i18next';
 import { browser } from '../base/lib-jitsi-meet';
-import { pinParticipant } from '../base/participants/actions';
+import { pinParticipant, raiseHandClear } from '../base/participants/actions';
 import MiddlewareRegistry from '../base/redux/MiddlewareRegistry';
 import StateListenerRegistry from '../base/redux/StateListenerRegistry';
 import { SET_REDUCED_UI } from '../base/responsive-ui/actionTypes';
@@ -41,7 +39,7 @@ import { showSalesforceNotification } from '../salesforce/actions';
 import { setToolboxEnabled } from '../toolbox/actions.any';
 
 import { DISMISS_CALENDAR_NOTIFICATION } from './actionTypes';
-import { dismissCalendarNotification, notifyKickedOut } from './actions';
+import { dismissCalendarNotification } from './actions';
 import { IFRAME_DISABLED_TIMEOUT_MINUTES, IFRAME_EMBED_ALLOWED_LOCATIONS } from './constants';
 
 
@@ -60,20 +58,6 @@ MiddlewareRegistry.register(store => next => action => {
 
     case SET_REDUCED_UI: {
         _setReducedUI(store);
-
-        break;
-    }
-
-    case KICKED_OUT: {
-        const { dispatch } = store;
-
-        dispatch(notifyKickedOut(
-            action.participant,
-            () => {
-                dispatch(conferenceLeft(action.conference));
-                dispatch(appNavigate(undefined));
-            }
-        ));
 
         break;
     }
@@ -105,6 +89,9 @@ StateListenerRegistry.register(
             // Unpin participant, in order to avoid the local participant
             // remaining pinned, since it's not destroyed across runs.
             dispatch(pinParticipant(null));
+
+            // Clear raised hands.
+            dispatch(raiseHandClear());
 
             // XXX I wonder if there is a better way to do this. At this stage
             // we do know what dialogs we want to keep but the list of those
@@ -190,11 +177,30 @@ function _checkIframe(state: IReduxState, dispatch: IStore['dispatch']) {
     if (inIframe() && state['features/base/config'].disableIframeAPI && !browser.isElectron()
         && !isVpaasMeeting(state) && !allowIframe) {
         // show sticky notification and redirect in 5 minutes
+        const { locationURL } = state['features/base/connection'];
+        let translationKey = 'notify.disabledIframe';
+        const hostname = locationURL?.hostname ?? '';
+        let domain = '';
+
+        const mapping: Record<string, string> = {
+            '8x8.vc': 'https://jaas.8x8.vc',
+            'meet.jit.si': 'https://jitsi.org/jaas'
+        };
+
+        const jaasDomain = mapping[hostname];
+
+        if (jaasDomain) {
+            translationKey = 'notify.disabledIframeSecondary';
+            domain = hostname;
+        }
+
         dispatch(showWarningNotification({
             description: translateToHTML(
                 i18next.t.bind(i18next),
-                'notify.disabledIframe',
+                translationKey,
                 {
+                    domain,
+                    jaasDomain,
                     timeout: IFRAME_DISABLED_TIMEOUT_MINUTES
                 }
             )

@@ -59,6 +59,7 @@ export interface IJitsiConference {
     enableLobby: Function;
     end: Function;
     getBreakoutRooms: Function;
+    getConnection: Function;
     getLocalParticipantProperty: Function;
     getLocalTracks: Function;
     getMeetingUniqueId: Function;
@@ -72,7 +73,6 @@ export interface IJitsiConference {
     getSsrcByTrack: Function;
     grantOwner: Function;
     isAVModerationSupported: Function;
-    isCallstatsEnabled: Function;
     isE2EEEnabled: Function;
     isE2EESupported: Function;
     isEndConferenceSupported: Function;
@@ -156,11 +156,13 @@ export interface IConferenceState {
 
 export interface IJitsiConferenceRoom {
     locked: boolean;
-    moderator: {
-        logout: Function;
-    };
     myroomjid: string;
     roomjid: string;
+    xmpp: {
+        moderator: {
+            logout: Function;
+        };
+    };
 }
 
 interface IConferenceFailedError extends Error {

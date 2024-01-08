@@ -88,16 +88,6 @@ export function getSourceIndexFromSourceName(sourceName) {
  * @interface SignalingLayer
  */
 export default class SignalingLayer extends Listenable {
-
-    /**
-     * Obtains the endpoint ID for given SSRC.
-     * @param {number} ssrc the SSRC number.
-     * @return {string|null} the endpoint ID for given media SSRC.
-     */
-    getSSRCOwner(ssrc) { // eslint-disable-line no-unused-vars
-        throw new Error('not implemented');
-    }
-
     /**
      * Obtains the info about given media advertised in the MUC presence of
      * the participant identified by the given MUC JID.
@@ -127,6 +117,15 @@ export default class SignalingLayer extends Listenable {
     }
 
     /**
+     * Obtains the endpoint ID for given SSRC.
+     * @param {number} ssrc the SSRC number.
+     * @return {string|null} the endpoint ID for given media SSRC.
+     */
+    getSSRCOwner(ssrc) { // eslint-disable-line no-unused-vars
+        throw new Error('not implemented');
+    }
+
+    /**
      * Obtains the source name for given SSRC.
      * @param {number} ssrc the track's SSRC identifier.
      * @returns {SourceName | undefined} the track's source name.
@@ -136,14 +135,23 @@ export default class SignalingLayer extends Listenable {
     }
 
     /**
-     * Set an SSRC owner.
-     * @param {number} ssrc an SSRC to be owned
-     * @param {string} endpointId owner's ID (MUC nickname)
-     * @throws TypeError if <tt>ssrc</tt> is not a number
+     * Removes the association between a given SSRC and its current owner so that it can re-used when the SSRC gets
+     * remapped to another source from a different endpoint.
+     * @param {number} ssrc a list of SSRCs.
      */
-    setSSRCOwner(ssrc, endpointId) { // eslint-disable-line no-unused-vars
+    removeSSRCOwners(ssrcList) { // eslint-disable-line no-unused-vars
     }
 
+    /**
+     * Set an SSRC owner.
+     *
+     * @param {number} ssrc - An SSRC to be owned.
+     * @param {string} endpointId - Owner's ID (MUC nickname).
+     * @param {string} sourceName - The related source name.
+     * @throws TypeError if <tt>ssrc</tt> is not a number.
+     */
+    setSSRCOwner(ssrc, endpointId, sourceName) { // eslint-disable-line no-unused-vars
+    }
 
     /**
      * Adjusts muted status of given track.
@@ -156,20 +164,20 @@ export default class SignalingLayer extends Listenable {
     }
 
     /**
-     * Saves the source name for a track identified by it's ssrc.
-     * @param {number} ssrc the ssrc of the target track.
-     * @param {SourceName} sourceName the track's source name to save.
-     * @throws TypeError if <tt>ssrc</tt> is not a number
-     */
-    setTrackSourceName(ssrc, sourceName) { // eslint-disable-line no-unused-vars
-    }
-
-    /**
      * Sets track's video type.
      * @param {SourceName} sourceName - the track's source name.
      * @param {VideoType} videoType - the new video type.
      * @returns {boolean}
      */
     setTrackVideoType(sourceName, videoType) { // eslint-disable-line no-unused-vars
+    }
+
+    /**
+     * Removes the SSRCs associated with a given endpoint from the SSRC owners.
+     *
+     * @param {string} id endpoint id of the participant leaving the call.
+     * @returns {void}
+     */
+    updateSsrcOwnersOnLeave(id) { // eslint-disable-line no-unused-vars
     }
 }

@@ -22,8 +22,7 @@ export enum JitsiConferenceEvents {
 
     /**
      * Fired just before the statistics module is disposed and it's the last chance
-     * to submit some logs to the statistics service (ex. CallStats if enabled),
-     * before it's disconnected.
+     * to submit some logs to the statistics service before it's disconnected.
      */
     BEFORE_STATISTICS_DISPOSED = 'conference.beforeStatisticsDisposed',
 
@@ -236,10 +235,15 @@ export enum JitsiConferenceEvents {
     PARTCIPANT_FEATURES_CHANGED = 'conference.partcipant_features_changed',
 
     /**
-     * Indicates that a the value of a specific property of a specific participant
+     * Indicates that a value of a specific property of a specific participant
      * has changed.
      */
     PARTICIPANT_PROPERTY_CHANGED = 'conference.participant_property_changed',
+
+    /**
+     * Indicates the state of sources attached to a given remote participant has changed.
+     */
+    PARTICIPANT_SOURCE_UPDATED = 'conference.participant_source_updated',
 
     /**
      * Indicates that the conference has switched between JVB and P2P connections.
@@ -276,7 +280,7 @@ export enum JitsiConferenceEvents {
      *     {string} address,
      *     {VideoSIPGWConstants} oldState,
      *     {VideoSIPGWConstants} newState,
-     *     {string} displayName}
+     *     {string} displayName
      * }.
      */
     VIDEO_SIP_GW_SESSION_STATE_CHANGED = 'conference.videoSIPGWSessionStateChanged',
@@ -375,6 +379,16 @@ export enum JitsiConferenceEvents {
     VIDEO_UNMUTE_PERMISSIONS_CHANGED = 'conference.video_unmute_permissions_changed',
 
     /**
+     * Event indicating we have received a message from the visitors component.
+     */
+    VISITORS_MESSAGE = 'conference.visitors_message',
+
+    /**
+     * Event indicating that our request for promotion was rejected.
+     */
+    VISITORS_REJECTION = 'conference.visitors_rejection',
+
+    /**
      * Event indicates that the bot participant type changed.
      */
     BOT_TYPE_CHANGED = 'conference.bot_type_changed',
@@ -430,14 +444,6 @@ export enum JitsiConferenceEvents {
      * }.
      */
     AV_MODERATION_PARTICIPANT_APPROVED = 'conference.av_moderation.participant.approved',
-   
-    /**
-    * You are kicked back to lobby.
-    * @param {options} event - {
-    *     {lobbyroom} lobbyroom jid,
-    * }.
-    */
-    KICK_BACK_TO_LOBBY_RECEIVED = 'conference.kick_back_to_lobby_recived',
 
     /**
      * AV Moderation, report for user being blocked to unmute.
@@ -468,7 +474,7 @@ export enum JitsiConferenceEvents {
     E2EE_VERIFICATION_READY = 'conference.e2ee.verification.ready',
 
     E2EE_VERIFICATION_COMPLETED = 'conference.e2ee.verification.completed'
-};
+}
 
 // exported for backward compatibility
 export const AUDIO_INPUT_STATE_CHANGE = JitsiConferenceEvents.AUDIO_INPUT_STATE_CHANGE;
@@ -498,6 +504,7 @@ export const E2EE_VERIFICATION_COMPLETED = JitsiConferenceEvents.E2EE_VERIFICATI
 export const JVB121_STATUS = JitsiConferenceEvents.JVB121_STATUS;
 export const KICKED = JitsiConferenceEvents.KICKED;
 export const PARTICIPANT_KICKED = JitsiConferenceEvents.PARTICIPANT_KICKED;
+export const PARTICIPANT_SOURCE_UPDATED = JitsiConferenceEvents.PARTICIPANT_SOURCE_UPDATED;
 export const LAST_N_ENDPOINTS_CHANGED = JitsiConferenceEvents.LAST_N_ENDPOINTS_CHANGED;
 export const FORWARDED_SOURCES_CHANGED = JitsiConferenceEvents.FORWARDED_SOURCES_CHANGED;
 export const LOCK_STATE_CHANGED = JitsiConferenceEvents.LOCK_STATE_CHANGED;
@@ -534,6 +541,8 @@ export const USER_LEFT = JitsiConferenceEvents.USER_LEFT;
 export const USER_ROLE_CHANGED = JitsiConferenceEvents.USER_ROLE_CHANGED;
 export const USER_STATUS_CHANGED = JitsiConferenceEvents.USER_STATUS_CHANGED;
 export const VIDEO_UNMUTE_PERMISSIONS_CHANGED = JitsiConferenceEvents.VIDEO_UNMUTE_PERMISSIONS_CHANGED;
+export const VISITORS_MESSAGE = JitsiConferenceEvents.VISITORS_MESSAGE;
+export const VISITORS_REJECTION = JitsiConferenceEvents.VISITORS_REJECTION;
 export const BOT_TYPE_CHANGED = JitsiConferenceEvents.BOT_TYPE_CHANGED;
 export const LOBBY_USER_JOINED = JitsiConferenceEvents.LOBBY_USER_JOINED;
 export const LOBBY_USER_UPDATED = JitsiConferenceEvents.LOBBY_USER_UPDATED;
@@ -542,7 +551,6 @@ export const AV_MODERATION_APPROVED = JitsiConferenceEvents.AV_MODERATION_APPROV
 export const AV_MODERATION_REJECTED = JitsiConferenceEvents.AV_MODERATION_REJECTED;
 export const AV_MODERATION_CHANGED = JitsiConferenceEvents.AV_MODERATION_CHANGED;
 export const AV_MODERATION_PARTICIPANT_APPROVED = JitsiConferenceEvents.AV_MODERATION_PARTICIPANT_APPROVED;
-export const KICK_BACK_TO_LOBBY_RECEIVED = JitsiConferenceEvents.KICK_BACK_TO_LOBBY_RECEIVED;
 export const AV_MODERATION_PARTICIPANT_REJECTED = JitsiConferenceEvents.AV_MODERATION_PARTICIPANT_REJECTED;
 export const BREAKOUT_ROOMS_MOVE_TO_ROOM = JitsiConferenceEvents.BREAKOUT_ROOMS_MOVE_TO_ROOM;
 export const BREAKOUT_ROOMS_UPDATED = JitsiConferenceEvents.BREAKOUT_ROOMS_UPDATED;

@@ -6,7 +6,6 @@ export enum JitsiConferenceErrors {
   CONNECTION_ERROR = 'conference.connectionError',
   CONFERENCE_RESTARTED = 'conference.restarted',
   NOT_ALLOWED_ERROR = 'conference.connectionError.notAllowed',
-  DUPLICATE_ACCESS_ERROR  = "conference.connectionError.duplicateAccess",
   MEMBERS_ONLY_ERROR = 'conference.connectionError.membersOnly',
   CONFERENCE_ACCESS_DENIED = 'conference.connectionError.accessDenied',
   FOCUS_DISCONNECTED = 'conference.focusDisconnected',

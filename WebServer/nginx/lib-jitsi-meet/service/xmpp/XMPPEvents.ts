@@ -69,6 +69,11 @@ export enum XMPPEvents {
     DISPLAY_NAME_CHANGED = 'xmpp.display_name_changed',
 
     /**
+     * Event for incoming presence error which is for required display name.
+     */
+    DISPLAY_NAME_REQUIRED = 'xmpp.display_name_required',
+
+    /**
      * Chat room instance have been added to Strophe.emuc plugin.
      */
     EMUC_ROOM_ADDED = 'xmpp.emuc_room_added',
@@ -204,11 +209,6 @@ export enum XMPPEvents {
      */
     RECORDER_STATE_CHANGED = 'xmpp.recorderStateChanged',
 
-    /**
-     * The conference was redirected to a visitor node.
-     */
-    REDIRECTED = 'xmpp.redirected',
-
     // Designates an event indicating that we received statistics from a
     // participant in the MUC.
     REMOTE_STATS = 'xmpp.remote_stats',
@@ -220,7 +220,6 @@ export enum XMPPEvents {
     RESERVATION_ERROR = 'xmpp.room_reservation_error',
     ROOM_CONNECT_ERROR = 'xmpp.room_connect_error',
     ROOM_CONNECT_NOT_ALLOWED_ERROR = 'xmpp.room_connect_error.not_allowed',
-    ROOM_CONNECT_DUPLICATE_ACCESS_ERROR= 'xmpp.room_connect_error.duplicate_access',
     ROOM_JOIN_ERROR = 'xmpp.room_join_error',
     ROOM_CONNECT_MEMBERS_ONLY_ERROR = 'xmpp.room_connect_error.members_only',
 
@@ -386,6 +385,16 @@ export enum XMPPEvents {
      */
     VIDEO_SIP_GW_SESSION_STATE_CHANGED = 'xmpp.videoSIPGWSessionStateChanged',
 
+    /**
+     * Event indicating we have received a message from the visitors component.
+     */
+    VISITORS_MESSAGE = 'xmpp.visitors_message',
+
+    /**
+     * Event indicating that our request for promotion was rejected.
+     */
+    VISITORS_REJECTION = 'xmpp.visitors_rejection',
+
     // Designates an event indicating that the local ICE connection state has
     // changed.
     ICE_CONNECTION_STATE_CHANGED = 'xmpp.ice_connection_state_changed',
@@ -395,10 +404,5 @@ export enum XMPPEvents {
      * contains JSON
      * TODO: this event contains a typo (xmmp vs xmpp) but it's unlikely this can be changed now
      */
-    JSON_MESSAGE_RECEIVED = 'xmmp.json_message_received',
-
-    /**
-     * Event which is emitted when we will be kicked back to lobby.
-     */
-     KICK_BACK_TO_LOBBY_RECEIVED= 'xmmp.kick_back_to_lobby_received'
+    JSON_MESSAGE_RECEIVED = 'xmmp.json_message_received'
 };

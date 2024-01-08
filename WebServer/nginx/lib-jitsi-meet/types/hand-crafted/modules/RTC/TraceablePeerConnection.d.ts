@@ -72,7 +72,7 @@ export default class TraceablePeerConnection {
   onnegotiationneeded: unknown; // TODO:
   ondatachannel: unknown; // TODO:
   getConnectionState: () => string;
-  isSimulcastOn: () => boolean;
+  isSpatialScalabilityOn: () => boolean;
   getAudioLevels: ( speakerList?: Array<unknown> ) => Map<string, number>; // TODO:
   getLocalTracks: ( mediaType: MediaType ) => JitsiLocalTrack[];
   getLocalVideoTrack: () => JitsiLocalTrack | undefined;
@@ -103,7 +103,6 @@ export default class TraceablePeerConnection {
   removeTrackMute: ( localTrack: JitsiLocalTrack ) => Promise<boolean>;
   createDataChannel: ( label: unknown, opts: unknown ) => unknown; // TODO:
   setLocalDescription: ( description: unknown ) => Promise<unknown>;
-  setAudioTransferActive: ( active: boolean ) => boolean;
   setSenderVideoDegradationPreference: () => Promise<void>;
   setMaxBitRate: () => Promise<void>; // TODO: definite bug in the JSDocs
   setRemoteDescription: ( description: unknown ) => unknown; // TODO:
@@ -118,7 +117,6 @@ export default class TraceablePeerConnection {
   addIceCandidate: ( candidate: unknown ) => unknown; // TODO:
   generateNewStreamSSRCInfo: (track: JitsiLocalTrack) => TraceablePeerConnection['localSSRCs'];
   usesUnifiedPlan: () => boolean;
-  getActiveSimulcastStreams: () => number;
   getStats: () => unknown; // TODO:
   toString: () => string;
 }

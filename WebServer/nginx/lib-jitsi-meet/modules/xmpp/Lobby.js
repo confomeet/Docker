@@ -1,6 +1,5 @@
 import { getLogger } from '@jitsi/logger';
-// import { $msg, Strophe } from 'strophe.js'; Moo
-import { $msg, $iq, Strophe } from 'strophe.js';
+import { $msg, Strophe } from 'strophe.js';
 
 import { XMPPEvents } from '../../service/xmpp/XMPPEvents';
 
@@ -310,6 +309,11 @@ export default class Lobby {
             this.lobbyRoom.addEventListener(
                 XMPPEvents.MUC_DESTROYED,
                 (reason, jid) => {
+                    this.lobbyRoom?.clean();
+
+                    this.lobbyRoom = undefined;
+                    logger.info('Lobby room left(destroyed)!');
+
                     // we are receiving the jid of the main room
                     // means we are invited to join, maybe lobby was disabled
                     if (jid) {
@@ -317,8 +321,6 @@ export default class Lobby {
 
                         return;
                     }
-
-                    this.lobbyRoom.clean();
 
                     this.mainRoom.eventEmitter.emit(XMPPEvents.MUC_DESTROYED, reason);
                 });
@@ -328,7 +330,9 @@ export default class Lobby {
             this.mainRoom.addEventListener(
                 XMPPEvents.MUC_JOINED,
                 () => {
-                    this.leave();
+                    this.leave().catch(() => {
+                        // this may happen if the room has been destroyed.
+                    });
                 });
         }
 
@@ -344,7 +348,6 @@ export default class Lobby {
             });
             this.lobbyRoom.addEventListener(XMPPEvents.ROOM_JOIN_ERROR, reject);
             this.lobbyRoom.addEventListener(XMPPEvents.ROOM_CONNECT_NOT_ALLOWED_ERROR, reject);
-            this.lobbyRoom.addEventListener(XMPPEvents.ROOM_CONNECT_DUPLICATE_ACCESS_ERROR, reject);
             this.lobbyRoom.addEventListener(XMPPEvents.ROOM_CONNECT_ERROR, reject);
 
             this.lobbyRoom.join();
@@ -405,39 +408,6 @@ export default class Lobby {
                 });
         } else {
             logger.error(`Not found member for ${memberRoomJid} in lobby room.`);
-        }
-    }
-    /**
-     * Kick user back to lobby room.
-     * @param id
-     */
-    kickBackToLobby(id) {
-        if (!this.isSupported() || !this.mainRoom.isModerator()) {
-            logger.error('Access denied for action: kick-back-to-lobby');
-
-            return;
-        }
-
-        const memberRoomJid = Object.keys(this.mainRoom.members)
-            .find(j => Strophe.getResourceFromJid(j) === id);
-
-        if (memberRoomJid) {
-            const jid = this.mainRoom.members[memberRoomJid].jid;
-            const msgToSend
-                = $iq({ to: this.mainRoom.roomjid,
-                    type: 'set' })
-                    .c('kick_back_to_lobby', {
-                        xmlns: 'jabber:iq',
-                        participant: jid });
-   
-                console.log(`Sendig user back to lobby: roomjid (${this.mainRoom.roomjid}), userjid (${jid}) `);
-                this.xmpp.connection.sendIQ(msgToSend,
-                () => { }, // eslint-disable-line no-empty-function
-                e => {
-                    logger.error(`Error sending kick-back-to-lobby for ${jid}`, e);
-                });
-        } else {
-            logger.error(`Not found member ${id} for ${memberRoomJid} in main room.`);
         }
     }
 }

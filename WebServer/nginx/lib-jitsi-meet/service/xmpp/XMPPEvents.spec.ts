@@ -74,7 +74,6 @@ describe( "/service/xmpp/XMPPEvents members", () => {
         expect( XMPPEvents.RESERVATION_ERROR ).toBe( 'xmpp.room_reservation_error' );
         expect( XMPPEvents.ROOM_CONNECT_ERROR ).toBe( 'xmpp.room_connect_error' );
         expect( XMPPEvents.ROOM_CONNECT_NOT_ALLOWED_ERROR ).toBe( 'xmpp.room_connect_error.not_allowed' );
-        expect( XMPPEvents.ROOM_CONNECT_DUPLICATE_ACCESS_ERROR ).toBe( 'xmpp.room_connect_error.duplicate_access' );
         expect( XMPPEvents.ROOM_JOIN_ERROR ).toBe( 'xmpp.room_join_error' );
         expect( XMPPEvents.ROOM_CONNECT_MEMBERS_ONLY_ERROR ).toBe( 'xmpp.room_connect_error.members_only' );
         expect( XMPPEvents.ROOM_MAX_USERS_ERROR ).toBe( 'xmpp.room_max_users_error' );

@@ -1,4 +1,5 @@
 import * as exported from "./JitsiConferenceEvents";
+import {VISITORS_MESSAGE, VISITORS_REJECTION} from "./JitsiConferenceEvents";
 
 // this test is brittle on purpose because it's designed to ensure that the TypeScript conversion maintains backward compatibility
 
@@ -31,6 +32,7 @@ describe( "/JitsiConferenceEvents members", () => {
         JVB121_STATUS,
         KICKED,
         PARTICIPANT_KICKED,
+        PARTICIPANT_SOURCE_UPDATED,
         LAST_N_ENDPOINTS_CHANGED,
         FORWARDED_SOURCES_CHANGED,
         LOCK_STATE_CHANGED,
@@ -67,6 +69,8 @@ describe( "/JitsiConferenceEvents members", () => {
         USER_ROLE_CHANGED,
         USER_STATUS_CHANGED,
         VIDEO_UNMUTE_PERMISSIONS_CHANGED,
+        VISITORS_MESSAGE,
+        VISITORS_REJECTION,
         BOT_TYPE_CHANGED,
         LOBBY_USER_JOINED,
         LOBBY_USER_UPDATED,
@@ -108,6 +112,7 @@ describe( "/JitsiConferenceEvents members", () => {
         expect( JVB121_STATUS ).toBe( 'conference.jvb121Status' );
         expect( KICKED ).toBe( 'conference.kicked' );
         expect( PARTICIPANT_KICKED ).toBe( 'conference.participant_kicked' );
+        expect( PARTICIPANT_SOURCE_UPDATED ).toBe( 'conference.participant_source_updated' );
         expect( LAST_N_ENDPOINTS_CHANGED ).toBe( 'conference.lastNEndpointsChanged' );
         expect( FORWARDED_SOURCES_CHANGED ).toBe( 'conference.forwardedSourcesChanged' );
         expect( LOCK_STATE_CHANGED ).toBe( 'conference.lock_state_changed' );
@@ -144,6 +149,8 @@ describe( "/JitsiConferenceEvents members", () => {
         expect( USER_ROLE_CHANGED ).toBe( 'conference.roleChanged' );
         expect( USER_STATUS_CHANGED ).toBe( 'conference.statusChanged' );
         expect( VIDEO_UNMUTE_PERMISSIONS_CHANGED ).toBe( 'conference.video_unmute_permissions_changed' );
+        expect( VISITORS_MESSAGE ).toBe( 'conference.visitors_message' );
+        expect( VISITORS_REJECTION ).toBe( 'conference.visitors_rejection' );
         expect( BOT_TYPE_CHANGED ).toBe( 'conference.bot_type_changed' );
         expect( LOBBY_USER_JOINED ).toBe( 'conference.lobby.userJoined' );
         expect( LOBBY_USER_UPDATED ).toBe( 'conference.lobby.userUpdated' );

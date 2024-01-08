@@ -21,6 +21,13 @@ found here: [http://jwt.io/#libraries-io]
 For the **Public Key Validation** a _key server_ must be provided via `asap_key_server` to verify the token against a 
 provided public key on the given key server. An example structure can be view in [Example Structure > Publiy Key Validation](#public-key-validation)
 
+This is how you generate the keys:
+```
+openssl genrsa -out jitsi-private.pem 2048
+openssl rsa -in jitsi-private.pem -pubout -out jitsi-public.pem
+```
+
+
 JWT authentication works with BOSH and WebSocket connections.
 
 ### Token Structure

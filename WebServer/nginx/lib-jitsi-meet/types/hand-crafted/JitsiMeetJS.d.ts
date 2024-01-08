@@ -16,7 +16,6 @@ import TrackVADEmitter, { VADProcessor } from './modules/detection/TrackVADEmitt
 import RecordingConstants from './modules/recording/recordingConstants';
 import JitsiLocalTrack from './modules/RTC/JitsiLocalTrack';
 import PrecallTest from './modules/statistics/PrecallTest';
-import AuthUtil from './modules/util/AuthUtil';
 import ScriptUtil from './modules/util/ScriptUtil';
 import { VideoSIPGWConstants } from './modules/videosipgw/VideoSIPGWConstants';
 import AudioMixer from './modules/webaudio/AudioMixer';
@@ -123,6 +122,8 @@ export type JitsiMeetJSType = {
 
   getActiveAudioDevice: () => Promise<Object>; // TODO: can we improve on object?
 
+  createLocalTracksFromMediaStreams: ( tracksInfo: unknown[] ) => JitsiLocalTrack[]; // TODO:
+
   // isDeviceListAvailable: () => boolean; // obsosete
 
   // isDeviceChangeAvailable: ( deviceType: string ) => boolean; // obsosete
@@ -133,16 +134,11 @@ export type JitsiMeetJSType = {
 
   enumerateDevices: ( callback: ( availableDevices: MediaDeviceInfo[] ) => void ) => void;
 
-  getGlobalOnErrorHandler: ( message: string, source: string, lineno?: number, colno?: number, error?: Error ) => void;
-
   setNetworkInfo: ( { isOnline: boolean } ) => void;
-
-  setVideoTrackContentHints: ( track: MediaStreamTrack, hint: string ) => void;
 
   precallTest: PrecallTest;
 
   util: {
-    AuthUtil: { getTokenAuthUrl: typeof AuthUtil.getTokenAuthUrl },
     ScriptUtil: { loadScript: typeof ScriptUtil.loadScript },
     browser: BrowserCapabilities
   }

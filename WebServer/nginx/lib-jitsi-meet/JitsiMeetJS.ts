@@ -12,6 +12,7 @@ import * as JitsiTrackErrors from './JitsiTrackErrors';
 import * as JitsiTrackEvents from './JitsiTrackEvents';
 import * as JitsiTranscriptionStatus from './JitsiTranscriptionStatus';
 import RTC from './modules/RTC/RTC';
+import RTCStats from './modules/RTCStats/RTCStats';
 import browser from './modules/browser';
 import NetworkInfo from './modules/connectivity/NetworkInfo';
 import { TrackStreamingStatus } from './modules/connectivity/TrackStreamingStatus';
@@ -24,10 +25,7 @@ import ProxyConnectionService
 import recordingConstants from './modules/recording/recordingConstants';
 import Settings from './modules/settings/Settings';
 import LocalStatsCollector from './modules/statistics/LocalStatsCollector';
-import precallTest from './modules/statistics/PrecallTest';
 import Statistics from './modules/statistics/statistics';
-import AuthUtil from './modules/util/AuthUtil';
-import GlobalOnErrorHandler from './modules/util/GlobalOnErrorHandler';
 import ScriptUtil from './modules/util/ScriptUtil';
 import * as VideoSIPGWConstants from './modules/videosipgw/VideoSIPGWConstants';
 import AudioMixer from './modules/webaudio/AudioMixer';
@@ -36,6 +34,8 @@ import * as ConnectionQualityEvents
     from './service/connectivity/ConnectionQualityEvents';
 import * as E2ePingEvents from './service/e2eping/E2ePingEvents';
 import { createGetUserMediaEvent } from './service/statistics/AnalyticsEvents';
+import *  as RTCStatsEvents from './modules/RTCStats/RTCStatsEvents';
+import { VideoType } from './service/RTC/VideoType';
 
 const logger = Logger.getLogger(__filename);
 
@@ -44,6 +44,11 @@ const logger = Logger.getLogger(__filename);
  * {@link JitsiMediaDevicesEvents.PERMISSION_PROMPT_IS_SHOWN} event.
  */
 const USER_MEDIA_SLOW_PROMISE_TIMEOUT = 1000;
+
+/**
+ * Indicates whether GUM has been executed or not.
+ */
+let hasGUMExecuted = false;
 
 /**
  * Extracts from an 'options' objects with a specific format (TODO what IS the
@@ -77,7 +82,6 @@ interface ICreateLocalTrackOptions {
 
 interface IJitsiMeetJSOptions {
     enableAnalyticsLogging?: boolean;
-    enableUnifiedOnChrome?: boolean;
     enableWindowOnErrorHandler?: boolean;
     externalStorage?: Storage;
     flags?: {
@@ -86,8 +90,15 @@ interface IJitsiMeetJSOptions {
     }
 }
 
+interface ICreateLocalTrackFromMediaStreamOptions {
+    stream: MediaStream,
+    sourceType: string,
+    mediaType: MediaType,
+    videoType?: VideoType
+}
+
 /**
- * The public API of the Lilac Meet library (a.k.a. {@code JitsiMeetJS}).
+ * The public API of the Jitsi Meet library (a.k.a. {@code JitsiMeetJS}).
  */
 export default {
 
@@ -117,7 +128,8 @@ export default {
         track: JitsiTrackEvents,
         mediaDevices: JitsiMediaDevicesEvents,
         connectionQuality: ConnectionQualityEvents,
-        e2eping: E2ePingEvents
+        e2eping: E2ePingEvents,
+        rtcstats: RTCStatsEvents
     },
     errors: {
         conference: JitsiConferenceErrors,
@@ -131,6 +143,9 @@ export default {
     mediaDevices: JitsiMediaDevices as unknown,
     analytics: Statistics.analytics as unknown,
     init(options: IJitsiMeetJSOptions = {}) {
+        // @ts-ignore
+        logger.info(`This appears to be ${browser.getName()}, ver: ${browser.getVersion()}`);
+
         Settings.init(options.externalStorage);
         Statistics.init(options);
         const flags = options.flags || {};
@@ -147,21 +162,6 @@ export default {
         if (options.enableAnalyticsLogging !== true) {
             logger.warn('Analytics disabled, disposing.');
             this.analytics.dispose();
-        }
-
-        if (options.enableWindowOnErrorHandler) {
-            GlobalOnErrorHandler.addHandler(
-                this.getGlobalOnErrorHandler.bind(this));
-        }
-
-        if (this.version) {
-            const logObject = {
-                id: 'component_version',
-                component: 'lib-jitsi-meet',
-                version: this.version
-            };
-
-            Statistics.sendLog(JSON.stringify(logObject));
         }
 
         return RTC.init(options);
@@ -190,6 +190,43 @@ export default {
 
     setLogLevel(level) {
         Logger.setLogLevel(level);
+    },
+
+    /**
+     * Expose rtcstats to the public API.
+     */
+    rtcstats: {
+        /**
+         * Sends identity data to the rtcstats server. This data is used
+         * to identify the specifics of a particular client, it can be any object
+         * and will show in the generated rtcstats dump under "identity" entries.
+         *
+         * @param {Object} identityData - Identity data to send.
+         * @returns {void}
+         */
+        sendIdentityEntry(identityData) {
+            RTCStats.sendIdentity(identityData);
+        },
+
+        /**
+         * Sends a stats entry to rtcstats server.
+         * @param {string} statsType - The type of stats to send.
+         * @param {Object} data - The stats data to send.
+         */
+        sendStatsEntry(statsType, data) {
+            RTCStats.sendStatsEntry(statsType, null, data);
+        },
+
+        /**
+         * Events generated by rtcstats, such as PeerConnections state,
+         * and websocket connection state.
+         *
+         * @param {RTCStatsEvents} event - The event name.
+         * @param {function} handler - The event handler.
+         */
+        on(event, handler) {
+            RTCStats.events.on(event, handler);
+        }
     },
 
     /**
@@ -281,34 +318,47 @@ export default {
 
         if (firePermissionPrompt && !RTC.arePermissionsGrantedForAvailableDevices()) {
             // @ts-ignore
-            JitsiMediaDevices.emitEvent(JitsiMediaDevicesEvents.PERMISSION_PROMPT_IS_SHOWN, browser.getName());
+            JitsiMediaDevices.emit(JitsiMediaDevicesEvents.PERMISSION_PROMPT_IS_SHOWN, browser.getName());
         } else if (fireSlowPromiseEvent) {
             window.setTimeout(() => {
                 if (!promiseFulfilled) {
-                    JitsiMediaDevices.emitEvent(JitsiMediaDevicesEvents.SLOW_GET_USER_MEDIA);
+                    JitsiMediaDevices.emit(JitsiMediaDevicesEvents.SLOW_GET_USER_MEDIA);
                 }
             }, USER_MEDIA_SLOW_PROMISE_TIMEOUT);
         }
 
+        let isFirstGUM = false;
+        let startTS = window.performance.now();
+
         if (!window.connectionTimes) {
             window.connectionTimes = {};
         }
-        window.connectionTimes['obtainPermissions.start']
-            = window.performance.now();
+
+        if (!hasGUMExecuted) {
+            hasGUMExecuted = true;
+            isFirstGUM = true;
+            window.connectionTimes['firstObtainPermissions.start'] = startTS;
+        }
+        window.connectionTimes['obtainPermissions.start'] = startTS;
 
         return RTC.obtainAudioAndVideoPermissions(restOptions)
             .then(tracks => {
                 promiseFulfilled = true;
 
-                window.connectionTimes['obtainPermissions.end']
-                    = window.performance.now();
+                let endTS = window.performance.now();
+
+                window.connectionTimes['obtainPermissions.end'] = endTS;
+
+                if (isFirstGUM) {
+                    window.connectionTimes['firstObtainPermissions.end'] = endTS;
+                }
 
                 Statistics.sendAnalytics(
                     createGetUserMediaEvent(
                         'success',
                         getAnalyticsAttributesFromOptions(restOptions)));
 
-                if (!RTC.options.disableAudioLevels) {
+                if (this.isCollectingLocalStats()) {
                     for (let i = 0; i < tracks.length; i++) {
                         const track = tracks[i];
 
@@ -332,31 +382,12 @@ export default {
                     }
                 }
 
-                // set the contentHint to "detail" for desktop tracks
-                // eslint-disable-next-line prefer-const
-                for (const track of tracks) {
-                    if (track.type === MediaType.VIDEO
-                        && track.videoType === 'desktop') {
-                        this.setVideoTrackContentHints(track.track, 'detail');
-                    }
-                }
-
                 return tracks;
             })
             .catch(error => {
                 promiseFulfilled = true;
 
                 if (error.name === JitsiTrackErrors.SCREENSHARING_USER_CANCELED) {
-                    // User cancelled action is not really an error, so only
-                    // log it as an event to avoid having conference classified
-                    // as partially failed
-                    const logObject = {
-                        id: 'screensharing_user_canceled',
-                        message: error.message
-                    };
-
-                    Statistics.sendLog(JSON.stringify(logObject));
-
                     Statistics.sendAnalytics(
                         createGetUserMediaEvent(
                             'warning',
@@ -364,14 +395,6 @@ export default {
                                 reason: 'extension install user canceled'
                             }));
                 } else if (error.name === JitsiTrackErrors.NOT_FOUND) {
-                    // logs not found devices with just application log to cs
-                    const logObject = {
-                        id: 'usermedia_missing_device',
-                        status: error.gum.devices
-                    };
-
-                    Statistics.sendLog(JSON.stringify(logObject));
-
                     const attributes
                         = getAnalyticsAttributesFromOptions(options);
 
@@ -380,9 +403,6 @@ export default {
                     Statistics.sendAnalytics(
                         createGetUserMediaEvent('error', attributes));
                 } else {
-                    // Report gUM failed to the stats
-                    Statistics.sendGetUserMediaFailed(error);
-
                     const attributes
                         = getAnalyticsAttributesFromOptions(options);
 
@@ -391,11 +411,41 @@ export default {
                         createGetUserMediaEvent('error', attributes));
                 }
 
-                window.connectionTimes['obtainPermissions.end']
-                    = window.performance.now();
+                let endTS = window.performance.now();
+
+                window.connectionTimes['obtainPermissions.end'] = endTS;
+
+                if (isFirstGUM) {
+                    window.connectionTimes['firstObtainPermissions.end'] = endTS;
+                }
 
                 return Promise.reject(error);
             });
+    },
+
+    /**
+     * Manually create JitsiLocalTrack's from the provided track info, by exposing the RTC method
+     *
+     * @param {Array<ICreateLocalTrackFromMediaStreamOptions>} tracksInfo - array of track information
+     * @returns {Array<JitsiLocalTrack>} - created local tracks
+     */
+    createLocalTracksFromMediaStreams(tracksInfo) {
+        return RTC.createLocalTracks(tracksInfo.map((trackInfo) => {
+            const tracks = trackInfo.stream.getTracks()
+                .filter(track => track.kind === trackInfo.mediaType);
+
+            if (!tracks || tracks.length === 0) {
+                throw new JitsiTrackError(JitsiTrackErrors.TRACK_NO_STREAM_TRACKS_FOUND, null, null);
+            }
+
+            if (tracks.length > 1) {
+                throw new JitsiTrackError(JitsiTrackErrors.TRACK_TOO_MANY_TRACKS_IN_STREAM, null, null);
+            }
+
+            trackInfo.track = tracks[0];
+
+            return trackInfo;
+        }));
     },
 
     /**
@@ -485,8 +535,7 @@ export default {
      * @param {boolean} True if stats are being collected for local tracks.
      */
     isCollectingLocalStats() {
-        return Statistics.audioLevelsEnabled
-            && LocalStatsCollector.isLocalStatsSupported();
+        return Statistics.audioLevelsEnabled && LocalStatsCollector.isLocalStatsSupported();
     },
 
     /**
@@ -501,24 +550,6 @@ export default {
         this.mediaDevices.enumerateDevices(callback);
     },
 
-    /* eslint-disable max-params */
-
-    /**
-     * @returns function that can be used to be attached to window.onerror and
-     * if options.enableWindowOnErrorHandler is enabled returns
-     * the function used by the lib.
-     * (function(message, source, lineno, colno, error)).
-     */
-    getGlobalOnErrorHandler(message, source, lineno, colno, error) {
-        logger.error(
-            `UnhandledError: ${message}`,
-            `Script: ${source}`,
-            `Line: ${lineno}`,
-            `Column: ${colno}`,
-            'StackTrace: ', error);
-        Statistics.reportGlobalError(error);
-    },
-
     /**
      * Informs lib-jitsi-meet about the current network status.
      *
@@ -531,33 +562,10 @@ export default {
     },
 
     /**
-     * Set the contentHint on the transmitted stream track to indicate
-     * charaterstics in the video stream, which informs PeerConnection
-     * on how to encode the track (to prefer motion or individual frame detail)
-     * @param {MediaStreamTrack} track - the track that is transmitted
-     * @param {String} hint - contentHint value that needs to be set on the track
-     */
-    setVideoTrackContentHints(track, hint) {
-        if ('contentHint' in track) {
-            track.contentHint = hint;
-            if (track.contentHint !== hint) {
-                logger.debug('Invalid video track contentHint');
-            }
-        } else {
-            logger.debug('MediaStreamTrack contentHint attribute not supported');
-        }
-    },
-
-    precallTest,
-
-    /* eslint-enable max-params */
-
-    /**
      * Represents a hub/namespace for utility functionality which may be of
      * interest to lib-jitsi-meet clients.
      */
     util: {
-        AuthUtil,
         ScriptUtil,
         browser
     }

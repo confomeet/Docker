@@ -60,7 +60,6 @@
   RESERVATION_ERROR = 'xmpp.room_reservation_error',
   ROOM_CONNECT_ERROR = 'xmpp.room_connect_error',
   ROOM_CONNECT_NOT_ALLOWED_ERROR = 'xmpp.room_connect_error.not_allowed',
-  ROOM_CONNECT_DUPLICATE_ACCESS_ERROR = "xmpp.room_connect_error.duplicate_access",
   ROOM_JOIN_ERROR = 'xmpp.room_join_error',
   ROOM_CONNECT_MEMBERS_ONLY_ERROR = 'xmpp.room_connect_error.members_only',
   ROOM_MAX_USERS_ERROR = 'xmpp.room_max_users_error',

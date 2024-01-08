@@ -18,30 +18,30 @@ const logger = getLogger(__filename);
 const STATS_MESSAGE_TYPE = 'stats';
 
 const kSimulcastFormats = [
-    { width: 1920,
+    {
         height: 1080,
-        layers: 3,
-        target: 'high' },
-    { width: 1280,
+        target: 'high'
+    },
+    {
         height: 720,
-        layers: 3,
-        target: 'high' },
-    { width: 960,
+        target: 'high'
+    },
+    {
         height: 540,
-        layers: 3,
-        target: 'standard' },
-    { width: 640,
+        target: 'standard'
+    },
+    {
         height: 360,
-        layers: 2,
-        target: 'standard' },
-    { width: 480,
+        target: 'standard'
+    },
+    {
         height: 270,
-        layers: 2,
-        target: 'low' },
-    { width: 320,
+        target: 'low'
+    },
+    {
         height: 180,
-        layers: 1,
-        target: 'low' }
+        target: 'low'
+    }
 ];
 
 /**
@@ -212,8 +212,10 @@ export default class ConnectionQuality {
                 this._updateRemoteStats(participant.getId(), payload);
             });
 
-        // Listen to local statistics events originating from the RTC module and update the _localStats field.
-        conference.statistics.addConnectionStatsListener(this._updateLocalStats.bind(this));
+        if (!this._options.config.disableLocalStats) {
+            // Listen to local statistics events originating from the RTC module and update the _localStats field.
+            conference.statistics.addConnectionStatsListener(this._updateLocalStats.bind(this));
+        }
 
         // Save the last time we were unmuted.
         conference.on(
@@ -332,7 +334,7 @@ export default class ConnectionQuality {
             const activeTPC = this._conference.getActivePeerConnection();
 
             if (activeTPC) {
-                const isSimulcastOn = activeTPC.isSimulcastOn();
+                const isSimulcastOn = activeTPC.isSpatialScalabilityOn();
                 const videoQualitySettings = activeTPC.getTargetVideoBitrates();
 
                 // Add the codec info as well.

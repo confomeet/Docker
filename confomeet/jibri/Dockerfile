@@ -10,10 +10,7 @@ LABEL org.opencontainers.image.documentation="https://jitsi.github.io/handbook/"
 
 ARG TARGETPLATFORM
 ARG USE_CHROMIUM=0
-#ARG CHROME_RELEASE=latest
-#ARG CHROMEDRIVER_MAJOR_RELEASE=latest
-ARG CHROME_RELEASE=104.0.5112.79
-ARG CHROMEDRIVER_MAJOR_RELEASE=104
+ARG CHROME_RELEASE=120.0.6099.109
 
 ARG XMPP_DOMAIN
 ENV XMPP_DOMAIN =${XMPP_DOMAIN}
@@ -21,9 +18,9 @@ ENV XMPP_DOMAIN =${XMPP_DOMAIN}
 COPY rootfs/ /
 
 RUN apt-dpkg-wrap apt-get update && \
-    apt-dpkg-wrap apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" jibri libgl1-mesa-dri procps jitsi-upload-integrations jq pulseaudio dbus dbus-x11 rtkit && \
+    apt-dpkg-wrap apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" jibri libgl1-mesa-dri procps jitsi-upload-integrations jq pulseaudio dbus dbus-x11 rtkit unzip && \
     /usr/bin/install-chrome.sh && \
     apt-cleanup && \
-    adduser jibri rtkit
+    usermod -aG adm,audio,video,plugdev,rtkit jibri
 
 VOLUME /config

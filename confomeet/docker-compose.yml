@@ -38,9 +38,12 @@ services:
       ProsodyDomain: ${CONFERENCE_PROSODY_DOMAIN}
       OtpPeriodInMinutes: ${ADMIN_OTP_PERIOD_IN_MINUTES}
       DisableActivate: ${ADMIN_DISABLE_ACTIVE}
+      YandexDisk__DebugToken: ${YANDEX_DISK_DEBUG_TOKEN}
     networks:
       - confomeetnet
     restart: unless-stopped
+    volumes:
+      - ./volume/jibri:/config
 
   etherpad:
     build:
@@ -97,7 +100,7 @@ services:
     networks:
       - confomeetnet
     volumes:
-      - ${CONFIG}/jibri:/config
+      - ./volume/jibri:/config
       - /dev/shm:/dev/shm
 
   jicofo:

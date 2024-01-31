@@ -156,6 +156,8 @@ services:
     networks:
       - confomeetnet
     restart: unless-stopped
+    volumes:
+      - ./volume/jibri:/config
 
   prosody:
     build:

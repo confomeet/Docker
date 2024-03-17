@@ -39,6 +39,7 @@ services:
       OtpPeriodInMinutes: ${ADMIN_OTP_PERIOD_IN_MINUTES}
       DisableActivate: ${ADMIN_DISABLE_ACTIVE}
       YandexDisk__DebugToken: ${YANDEX_DISK_DEBUG_TOKEN}
+      ASPNETCORE_HTTP_PORTS: "80"
     networks:
       - confomeetnet
     restart: unless-stopped

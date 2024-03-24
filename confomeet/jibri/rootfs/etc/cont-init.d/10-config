@@ -35,6 +35,14 @@ tpl /defaults/jibri.conf > /etc/jitsi/jibri/jibri.conf
 tpl /defaults/logging.properties > /etc/jitsi/jibri/logging.properties
 tpl /defaults/xorg-video-dummy.conf > /etc/jitsi/jibri/xorg-video-dummy.conf
 
+# S3
+mkdir -p /home/jibri/.aws
+tpl /defaults/aws-credentials.conf >/home/jibri/.aws/credentials
+tpl /defaults/aws-config.conf >/home/jibri/.aws/config
+chown -R jibri:jibri /home/jibri/.aws
+chmod 600 /home/jibri/.aws/config
+chmod 600 /home/jibri/.aws/credentials
+
 # make recording dir
 [ -z "${JIBRI_RECORDING_DIR}" ] && export JIBRI_RECORDING_DIR=/config/recordings
 mkdir -p ${JIBRI_RECORDING_DIR}

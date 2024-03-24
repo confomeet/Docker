@@ -21,6 +21,10 @@ RUN apt-dpkg-wrap apt-get update && \
     apt-dpkg-wrap apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" jibri libgl1-mesa-dri procps jitsi-upload-integrations jq pulseaudio dbus dbus-x11 rtkit unzip && \
     /usr/bin/install-chrome.sh && \
     apt-cleanup && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" && \
+    unzip /tmp/awscliv2.zip -d /tmp/awscliv2 && \
+    /tmp/awscliv2/aws/install && \
+    rm -rf /tmp/awscliv2* && \
     usermod -aG adm,audio,video,plugdev,rtkit jibri
 
 VOLUME /config

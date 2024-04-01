@@ -9,8 +9,8 @@ local t = {}
 local main_muc_service
 local main_muc_component_config = module:get_option_string('main_muc');
 if main_muc_component_config == nil then
-    module:log('error', 'kick back to lobby is not enabled missing main_muc config');
-    return;
+  module:log('error', 'kick back to lobby is not enabled missing main_muc config');
+  return;
 end
 
 local http = require "net.http";
@@ -18,30 +18,26 @@ local timer = require "util.timer";
 local async = require "util.async";
 local url = module:get_option_string("conference_logger_url");
 assert(url, "Missing required config option 'conference_logger_url'");
-
 local focus_jid = module:get_option_string("focus_user_jid", "focus@auth.meet.jitsi");
 module:log("info","focus_jid             is            %s",focus_jid)
 module:log("info","conference_logger_url: %s",url)
 
-
 local http_error_map = {
-    [0]   = { "cancel", "remote-server-timeout", "Connection failure" };
-    -- 4xx
-    [400] = { "modify", "bad-request" };
-    [401] = { "auth", "not-authorized" };
-    [402] = { "auth", "forbidden", "Payment required" };
-    [403] = { "auth", "forbidden" };
-    [404] = { "cancel", "item-not-found" };
-    [410] = { "cancel", "gone" };
-    -- 5xx
-    [500] = { "cancel", "internal-server-error" };
-    [501] = { "cancel", "feature-not-implemented" };
-    [502] = { "cancel", "remote-server-timeout", "Bad gateway" };
-    [503] = { "wait", "remote-server-timeout", "Service temporarily unavailable" };
-    [504] = { "wait", "remote-server-timeout", "Gateway timeout" };
+  [0]   = { "cancel", "remote-server-timeout", "Connection failure" };
+  -- 4xx
+  [400] = { "modify", "bad-request" };
+  [401] = { "auth", "not-authorized" };
+  [402] = { "auth", "forbidden", "Payment required" };
+  [403] = { "auth", "forbidden" };
+  [404] = { "cancel", "item-not-found" };
+  [410] = { "cancel", "gone" };
+  -- 5xx
+  [500] = { "cancel", "internal-server-error" };
+  [501] = { "cancel", "feature-not-implemented" };
+  [502] = { "cancel", "remote-server-timeout", "Bad gateway" };
+  [503] = { "wait", "remote-server-timeout", "Service temporarily unavailable" };
+  [504] = { "wait", "remote-server-timeout", "Gateway timeout" };
 }
-
-
 
 function is_owner_present(event)
   local mods = event.room:each_affiliation("owner");
@@ -57,41 +53,37 @@ function is_owner_present(event)
 end
 
 function handle_stanza(st, type,Id,email,kicker_name)
-
-
   local message = tostring(st);
-
- local message2= kicker_name..message..email;
-module:log("info","message kick it is %s",tostring(message))
+  local message2= kicker_name..message..email;
+  module:log("info","message kick it is %s",tostring(message))
   local request_body = json.encode({
-      to = st.attr.to;
-      from = st.attr.from;
-      kind = st.name;
-      type = type;
-      meetingId = Id;
-      message = message2;
+    to = st.attr.to;
+    from = st.attr.from;
+    kind = st.name;
+    type = type;
+    meetingId = Id;
+    message = message2;
   });
 
-
   http.request(url, {
-      body = request_body;
-      headers = {
-          ["Content-Type"] = "application/json";
-      };
+    body = request_body;
+    headers = {
+      ["Content-Type"] = "application/json";
+    };
   }, function (response_text, code, response)
-      module:log("info", "the  response_text is %s , and the code is %s ,  and the response is %s", response_text,code,response);
-      module:log("info", "the  request_body is %s ", request_body);
-      if st.attr.type == "error" then return; end -- Avoid error loops, don't reply to error stanzas
-      module:log("info", "Response code: %s", code );
-      if code == 200 and response_text and response.headers["content-type"] == "application/json" then
-          local response_data = json.decode(response_text);
+    module:log("info", "the  response_text is %s , and the code is %s ,  and the response is %s", response_text,code,response);
+    module:log("info", "the  request_body is %s ", request_body);
+    if st.attr.type == "error" then return; end -- Avoid error loops, don't reply to error stanzas
+    module:log("info", "Response code: %s", code );
+    if code == 200 and response_text and response.headers["content-type"] == "application/json" then
+      local response_data = json.decode(response_text);
 
-      elseif code >= 200 and code <= 299 then
-          return;
-      else
-          -- module:send(error_reply(stanza, code));
-      end
+    elseif code >= 200 and code <= 299 then
       return;
+    else
+      -- module:send(error_reply(stanza, code));
+    end
+    return;
   end);
   return;
 end
@@ -136,39 +128,37 @@ function kick_back_to_lobby(event)
   room:route_stanza(kick_message);
   local kicker_name = "";
   for _, user in room:each_occupant() do
-    if user.jid == origin.full_jid then 
+    if user.jid == origin.full_jid then
       local kicker_session = user.sessions[user.jid];
       local kicker_identity_tag = kicker_session:get_child('identity');
       local user_tag = kicker_identity_tag:get_child('user');
-            local name_tag = user_tag:get_child('name');
-            local user_name = name_tag:get_text();
-            kicker_name = user_name;
+      local name_tag = user_tag:get_child('name');
+      local user_name = name_tag:get_text();
+      kicker_name = user_name;
     end
 
-    if user.jid == kickee_jid then 
-  local session = user.sessions[kickee_jid];
+    if user.jid == kickee_jid then
+      local session = user.sessions[kickee_jid];
 
-  local identity_tag = session:get_child('identity');
+      local identity_tag = session:get_child('identity');
 
-            local user_tag = identity_tag:get_child('user');
-            local id_tag = user_tag:get_child('id');
-            local user_uuid = id_tag:get_text();
-            local groupId_tag= user_tag:get_child('groupId');
-            local user_groupId = groupId_tag:get_text();
-            local email_tag = user_tag:get_child('email');
-            local user_email = email_tag:get_text();
-            handle_stanza(stanza,"occupant_leaving_lobby",user_groupId,user_email,kicker_name);
-  local kicked={userid=user_uuid,roomid=user_groupId}
-  table.insert(t,kicked);
+      local user_tag = identity_tag:get_child('user');
+      local id_tag = user_tag:get_child('id');
+      local user_uuid = id_tag:get_text();
+      local groupId_tag= user_tag:get_child('groupId');
+      local user_groupId = groupId_tag:get_text();
+      local email_tag = user_tag:get_child('email');
+      local user_email = email_tag:get_text();
+      handle_stanza(stanza,"occupant_leaving_lobby",user_groupId,user_email,kicker_name);
+      local kicked={userid=user_uuid,roomid=user_groupId}
+      table.insert(t,kicked);
     end
   end
-  -- for _,v in pairs(t) do
-  --   print('\t',v)
-  -- end
+
   module:log("info","kicker name  is : %s", kicker_name)
   room:set_affiliation(true, kickee_jid, 'outcast');
   room:save();
-  
+
   origin.send(st.stanza('kick_back_to_lobby_success'));
 end
 
@@ -179,15 +169,15 @@ end
 
 function process_host_module(name, callback)
   local function process_host(host)
-      if host == name then
-          callback(module:context(host), host);
-      end
+    if host == name then
+      callback(module:context(host), host);
+    end
   end
 
   if prosody.hosts[name] == nil then
-      prosody.events.add_handler('host-activated', process_host);
+    prosody.events.add_handler('host-activated', process_host);
   else
-      process_host(name);
+    process_host(name);
   end
 end
 
@@ -204,7 +194,6 @@ process_host_module(main_muc_component_config, function(host_module, host)
   end
 end);
 
-
 process_host_module(main_muc_component_config, function(host_module, host)
   host_module:hook('muc-room-created', function (event)
     prosody.events.fire_event('create-lobby-room', event);
@@ -214,7 +203,6 @@ process_host_module(main_muc_component_config, function(host_module, host)
     local room = event.room;
     local invitee = event.stanza.attr.from;
     local invitee_bare_jid = jid_bare(invitee);
-
     local _, invitee_domain = jid_split(invitee);
     local whitelistJoin = false;
 
@@ -231,73 +219,61 @@ process_host_module(main_muc_component_config, function(host_module, host)
     if whitelistJoin then
         local affiliation = room:get_affiliation(invitee);
         if not affiliation or affiliation == 0 then
-            event.occupant.role = 'participant';
-            room:set_affiliation(true, invitee_bare_jid, 'member');
-            room:save();
-            return;
+          event.occupant.role = 'participant';
+          room:set_affiliation(true, invitee_bare_jid, 'member');
+          room:save();
+          return;
         end
     end
 
     local occupant_auth_token = event.origin.auth_token;
     if occupant_auth_token == nil then return end
-
     local data, err = jwt.decode(occupant_auth_token);
-    -----
     local occupant_uuid = data.context.user.id
     local affiliation = room:get_affiliation(invitee);
     local user_groupId =  data.context.user.groupId
     for k,v in pairs(t) do
       if occupant_uuid == v.userid and user_groupId == v.roomid and data.moderator ==false then
-          --   print('\t',v,occupant_uuid,v.roomid)
-          -- table.remove(t,k);
-           return
-          end
-          end
-
+        --   print('\t',v,occupant_uuid,v.roomid)
+        -- table.remove(t,k);
+        return
+      end
+    end
 
     if not data.moderator and event.occupant.role  == 'participant' then return end
     if data.moderator then
-          if not affiliation or affiliation == 0 then
-            event.occupant.role = 'participant';
-            room:set_affiliation(true, invitee_bare_jid, 'member');
-            room:save();
-          end
+      if not affiliation or affiliation == 0 then
+        event.occupant.role = 'participant';
+        room:set_affiliation(true, invitee_bare_jid, 'member');
+        room:save();
+      end
     else
       if not data.autoLobby and is_owner_present(event) and event.occupant.role  == nil then
         module:log("info","participant affiliation it is : %s ",affiliation);
-          if not affiliation or affiliation == 0 then
-            event.occupant.role = 'participant';
-            room:set_affiliation(true, invitee_bare_jid, 'member');
-            room:save();
-          end
-        else
-          return
-         end
+        if not affiliation or affiliation == 0 then
+          event.occupant.role = 'participant';
+          room:set_affiliation(true, invitee_bare_jid, 'member');
+          room:save();
+        end
+      else
+        return
+      end
     end
   end);
 
   host_module:hook('muc-occupant-joined', function (event)
     local occupant_auth_token = event.origin.auth_token;
-       if occupant_auth_token == nil then return end
-   
-       local data, err = jwt.decode(occupant_auth_token);
-       -----
-       local occupant_uuid = data.context.user.id
-       local user_groupId =  data.context.user.groupId
-   --    local affiliation = room:get_affiliation(invitee);
-       for k,v in pairs(t) do
-         if occupant_uuid == v.userid and user_groupId == v.roomid then
-              --  print('\t',v,occupant_uuid)
-             table.remove(t,k);
-              return
-             end
-             end
-
-   
-   end);
-   
-   
+    if occupant_auth_token == nil then return end
+    local data, err = jwt.decode(occupant_auth_token);
+    local occupant_uuid = data.context.user.id
+    local user_groupId =  data.context.user.groupId
+    --    local affiliation = room:get_affiliation(invitee);
+    for k,v in pairs(t) do
+      if occupant_uuid == v.userid and user_groupId == v.roomid then
+        --  print('\t',v,occupant_uuid)
+        table.remove(t,k);
+        return
+      end
+    end
+  end);
 end);
-
-
-

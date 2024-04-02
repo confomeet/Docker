@@ -97,8 +97,13 @@ function kick_back_to_lobby(event)
   local room = main_muc_service.get_room_from_jid(jid_bare(node .. '@' .. main_muc_component_config));
   if not room then return end
 
-  local kickee_jid = stanza[1].attr.participant;
+  local kick_item = stanza:get_child("kick-back-to-lobby", "confomeet/lobby");
+  local kickee_jid = kick_item.attr.participant;
   if not kickee_jid then return end
+
+  local reason_item = kick_item:get_child("reason");
+  local reason = reason_item:get_text();
+  if not reason then reason = "You are returned to lobby" end
 
   local kicker_affiliation = room.get_affiliation(room, origin.full_jid)
   if kicker_affiliation ~= 'owner' then
@@ -106,24 +111,22 @@ function kick_back_to_lobby(event)
     return
   end
 
-  local kickee_affiliation = room.get_affiliation(room, kickee_jid)
-  if kickee_affiliation ~= 'member' then
-    origin.send(st.stanza('kick_back_to_lobby_error'):tag('reason'):text('You cannot kick this participant'))
-    return
-  end
+  module:log('debug', 'Kick %s to lobby by %s', kickee_jid, stanza.attr.from);
 
-  module:log('debug', 'Kick %s to lobby', kickee_jid);
-
-  local kick_message = st.message({
-    type = 'groupchat',
-    from = stanza.attr.to,
-    to = kickee_jid
+  local kick_message = st.iq({
+    type = 'set',
+    from = stanza.attr.from,
+    to = kickee_jid,
+    id=stanza.attr.id.."-fwd-to-user"
   })
-    :tag('kick-back-to-lobby', { xmlns='jabber:message:kick_back_to_lobby' })
+    :tag('kick-back-to-lobby', { xmlns='confomeet/lobby' })
     :text(kickee_jid)
     :up()
     :tag('lobbyroom')
     :text(room._data.lobbyroom)
+    :up()
+    :tag('reason')
+    :text(reason)
     :up();
   room:route_stanza(kick_message);
   local kicker_name = "";
@@ -136,7 +139,8 @@ function kick_back_to_lobby(event)
       local user_name = name_tag:get_text();
       kicker_name = user_name;
     end
-
+  end
+  for _, user in room:each_occupant() do
     if user.jid == kickee_jid then
       local session = user.sessions[kickee_jid];
 
@@ -164,7 +168,7 @@ end
 
 function process_main_muc_loaded(main_muc, host_module)
   main_muc_service = main_muc;
-  host_module:hook("iq-set/bare/jabber:iq:kick_back_to_lobby", kick_back_to_lobby, 1);
+  host_module:hook("iq-set/bare/confomeet/lobby:kick-back-to-lobby", kick_back_to_lobby, 1);
 end
 
 function process_host_module(name, callback)

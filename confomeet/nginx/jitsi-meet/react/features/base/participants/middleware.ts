@@ -44,8 +44,10 @@ import {
     PARTICIPANT_DISPLAY_NAME_CHANGED,
     PARTICIPANT_JOINED,
     PARTICIPANT_LEFT,
+    PARTICIPANT_RETURNED_TO_LOBBY,
     PARTICIPANT_UPDATED,
     RAISE_HAND_UPDATED,
+    RETURN_PARTICIPANT_TO_LOBBY,
     SET_LOCAL_PARTICIPANT_RECORDING_STATUS
 } from './actionTypes';
 import {
@@ -84,6 +86,7 @@ import { PARTICIPANT_JOINED_FILE, PARTICIPANT_LEFT_FILE } from './sounds';
 import { IJitsiParticipant } from './types';
 
 import './subscriber';
+import { returnedToLobby } from '../conference/actions';
 
 /**
  * Middleware that captures CONFERENCE_JOINED and CONFERENCE_LEFT actions and
@@ -151,6 +154,21 @@ MiddlewareRegistry.register(store => next => action => {
         const { conference } = store.getState()['features/base/conference'];
 
         conference?.kickParticipant(action.id);
+        break;
+    }
+
+    case RETURN_PARTICIPANT_TO_LOBBY: {
+        const { conference } = store.getState()['features/base/conference'];
+
+        conference?.returnParticipantToLobby(action.id);
+        break;
+    }
+
+    case PARTICIPANT_RETURNED_TO_LOBBY: {
+        const { conference } = store.getState()['features/base/conference'];
+        const { reason } = action;
+        if (conference)
+            store.dispatch(returnedToLobby(conference, reason));
         break;
     }
 

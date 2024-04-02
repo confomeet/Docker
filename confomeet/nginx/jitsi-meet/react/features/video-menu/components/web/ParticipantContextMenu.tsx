@@ -43,6 +43,7 @@ import SendToRoomButton from './SendToRoomButton';
 import TogglePinToStageButton from './TogglePinToStageButton';
 import VerifyParticipantButton from './VerifyParticipantButton';
 import VolumeSlider from './VolumeSlider';
+import ReturnToLobbyButton from './ReturnToLobbyButton';
 
 interface IProps {
 
@@ -142,7 +143,7 @@ const ParticipantContextMenu = ({
         = useSelector((state: IReduxState) => state['features/base/config']);
     const visitorsMode = useSelector((state: IReduxState) => iAmVisitor(state));
     const visitorsSupported = useSelector((state: IReduxState) => state['features/visitors'].supported);
-    const { disableDemote, disableKick, disableGrantModerator, disablePrivateChat } = remoteVideoMenu;
+    const { disableDemote, disableKick, disableGrantModerator, disablePrivateChat, disableReturnToLobby } = remoteVideoMenu;
     const { participantsVolume } = useSelector((state: IReduxState) => state['features/filmstrip']);
     const _volume = (participant?.local ?? true ? undefined
         : participant?.id ? participantsVolume[participant?.id] : undefined) ?? 1;
@@ -251,6 +252,10 @@ const ParticipantContextMenu = ({
 
         if (!disableKick) {
             buttons2.push(<KickButton { ...getButtonProps(BUTTONS.KICK) } />);
+        }
+
+        if (!disableReturnToLobby) {
+            buttons2.push(<ReturnToLobbyButton { ...getButtonProps(BUTTONS.RETURN_TO_LOBBY) } />);
         }
 
         if (shouldDisplayVerification) {

@@ -934,6 +934,7 @@ var config = {
     //     },
     //     'send-participant-to-room',
     //     'verify',
+    //     'return-to-lobby',
     // ],
 
     // List of pre meeting screens buttons to hide. The values must be one or more of the 5 allowed buttons:

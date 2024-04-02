@@ -19,11 +19,13 @@ import {
     PARTICIPANT_JOINED,
     PARTICIPANT_KICKED,
     PARTICIPANT_LEFT,
+    PARTICIPANT_RETURNED_TO_LOBBY,
     PARTICIPANT_SOURCES_UPDATED,
     PARTICIPANT_UPDATED,
     PIN_PARTICIPANT,
     RAISE_HAND_CLEAR,
     RAISE_HAND_UPDATED,
+    RETURN_PARTICIPANT_TO_LOBBY,
     SCREENSHARE_PARTICIPANT_NAME_CHANGED,
     SET_LOADABLE_AVATAR_URL,
     SET_LOCAL_PARTICIPANT_RECORDING_STATUS
@@ -102,6 +104,13 @@ export function grantModerator(id: string) {
 export function kickParticipant(id: string) {
     return {
         type: KICK_PARTICIPANT,
+        id
+    };
+}
+
+export function returnParticipantToLobby(id: string) {
+    return {
+        type: RETURN_PARTICIPANT_TO_LOBBY,
         id
     };
 }
@@ -564,6 +573,22 @@ export function participantKicked(kicker: any, kicked: any) {
             },
             titleKey: 'notify.kickParticipant'
         }, NOTIFICATION_TIMEOUT_TYPE.MEDIUM));
+    };
+}
+
+/**
+ *
+ * @param {Object} returned the instance of participant.
+ * @param {string} reason the reason for returning to lobby.
+ */
+export function participantReturnedToLobby(returned: any, reason: string) {
+    // FIXME: `returned` is fucked up right now.
+    return (dispatch: IStore['dispatch']) => {
+        dispatch({
+            type: PARTICIPANT_RETURNED_TO_LOBBY,
+            returned: "(null)",
+            reason
+        });
     };
 }
 

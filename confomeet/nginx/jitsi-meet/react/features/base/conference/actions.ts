@@ -22,6 +22,7 @@ import {
     participantKicked,
     participantMutedUs,
     participantPresenceChanged,
+    participantReturnedToLobby,
     participantRoleChanged,
     participantSourcesUpdated,
     participantUpdated
@@ -59,6 +60,7 @@ import {
     LOCK_STATE_CHANGED,
     NON_PARTICIPANT_MESSAGE_RECEIVED,
     P2P_STATUS_CHANGED,
+    RETURNED_TO_LOBBY,
     SEND_TONES,
     SET_ASSUMED_BANDWIDTH_BPS,
     SET_FOLLOW_ME,
@@ -145,6 +147,10 @@ function _addConferenceListeners(conference: IJitsiConference, dispatch: IStore[
     conference.on(
         JitsiConferenceEvents.PARTICIPANT_KICKED,
         (kicker: any, kicked: any) => dispatch(participantKicked(kicker, kicked)));
+
+    conference.on(
+        JitsiConferenceEvents.PARTICIPANT_RETURNED_TO_LOBBY,
+        (returned: any, reason: string) => dispatch(participantReturnedToLobby(returned, reason)));
 
     conference.on(
         JitsiConferenceEvents.PARTICIPANT_SOURCE_UPDATED,
@@ -706,6 +712,25 @@ export function kickedOut(conference: IJitsiConference, participant: Object) {
     };
 }
 
+/**
+ * Signals that we've been returned to the lobby.
+ *
+ * @param {JitsiConference} conference - The {@link JitsiConference} instance
+ * for which the event is being signaled.
+ * @param {string?} reason - return to lobby reason.
+ * @returns {{
+ *     type: KICKED_OUT,
+ *     conference: JitsiConference,
+ *     reason: string
+ * }}
+ */
+export function returnedToLobby(conference: IJitsiConference, reason: string) {
+    return {
+        type: RETURNED_TO_LOBBY,
+        conference,
+        reason
+    }
+}
 
 /**
  * Action to leave a conference.

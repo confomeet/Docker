@@ -105,6 +105,7 @@ import {
     participantKicked,
     participantMutedUs,
     participantPresenceChanged,
+    participantReturnedToLobby,
     participantRoleChanged,
     participantSourcesUpdated,
     participantUpdated,
@@ -166,6 +167,7 @@ import { createRnnoiseProcessor } from './react/features/stream-effects/rnnoise'
 import { handleToggleVideoMuted } from './react/features/toolbox/actions.any';
 import { muteLocal } from './react/features/video-menu/actions.any';
 import UIEvents from './service/UI/UIEvents';
+import { reloadNow } from './react/features/app/actions.web';
 
 const logger = Logger.getLogger(__filename);
 
@@ -1893,6 +1895,10 @@ export default {
             APP.store.dispatch(participantKicked(kicker, kicked));
         });
 
+        room.on(JitsiConferenceEvents.PARTICIPANT_RETURNED_TO_LOBBY, (returned, reason) => {
+            APP.store.dispatch(participantReturnedToLobby(returned, reason));
+        });
+
         room.on(JitsiConferenceEvents.PARTICIPANT_SOURCE_UPDATED,
             jitsiParticipant => {
                 APP.store.dispatch(participantSourcesUpdated(jitsiParticipant));
@@ -2475,6 +2481,28 @@ export default {
         }
 
         return maybeDisconnect();
+    },
+
+    returnToLobby(reason = '(direct call)') {
+        APP.store.dispatch(destroyLocalTracks());
+        this._localTracksInitialized = false;
+
+        if (this.deviceChangeListener) {
+            JitsiMeetJS.mediaDevices.removeEventListener(
+                JitsiMediaDevicesEvents.DEVICE_LIST_CHANGED,
+                this.deviceChangeListener);
+        }
+
+        APP.UI.removeAllListeners();
+
+        const leavePromise = this.leaveRoom(false, 'Returning to the lobby').catch(() => Promise.resolve());
+
+        leavePromise.then(() => {
+            this._room = undefined;
+            room = undefined;
+
+            APP.store.dispatch(reloadNow());
+        });
     },
 
     /**

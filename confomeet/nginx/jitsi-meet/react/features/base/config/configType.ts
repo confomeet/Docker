@@ -504,6 +504,7 @@ export interface IConfig {
         disableDemote?: boolean;
         disableGrantModerator?: boolean;
         disableKick?: boolean;
+        disableReturnToLobby?: boolean;
         disablePrivateChat?: boolean;
         disabled?: boolean;
     };

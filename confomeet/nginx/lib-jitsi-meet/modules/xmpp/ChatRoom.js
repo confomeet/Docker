@@ -1305,6 +1305,15 @@ export default class ChatRoom extends Listenable {
 
     /**
      *
+     * @param {string} actorJid
+     * @param {string?} reason
+     */
+    onReturnToLobby(actorJid, reason) {
+        this.eventEmitter.emit(XMPPEvents.RETURNED_TO_LOBBY, actorJid, reason);
+    }
+
+    /**
+     *
      * @param jid
      * @param affiliation
      */
@@ -1344,6 +1353,24 @@ export default class ChatRoom extends Listenable {
             kickIQ,
             result => logger.log('Kick participant with jid: ', jid, result),
             error => logger.log('Kick participant error: ', error));
+    }
+
+    /**
+     *
+     * @param {*} jid
+     * @param {*} reason
+     */
+    returnToLobby(jid, reason = 'You have been returned to a lobby') {
+        const returnToLobbyIQ = $iq({ from: this.connection.jid, to: this.roomjid, type: 'set' })
+            .c('kick-back-to-lobby', { xmlns: 'confomeet/lobby', participant: jid })
+                .c('reason', { xmlns: 'confomeet/lobby' }).t(reason).up()
+            .up();
+
+
+        this.connection.sendIQ(
+            returnToLobbyIQ,
+            result => logger.log(`Return participant ${jid} to lobby: ${result}`),
+            error => logger.log(`Return participant ${jid} to lobby failed: `, error));
     }
 
     /* eslint-disable max-params */

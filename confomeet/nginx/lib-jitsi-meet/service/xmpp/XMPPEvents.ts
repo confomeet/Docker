@@ -110,6 +110,13 @@ export enum XMPPEvents {
      */
     KICKED = 'xmpp.kicked',
 
+    /**
+     * Designates an event indicating that we were returned to the prejoin lobby.
+     * @param {string} actorJid - the jid of the initiator.
+     * @param {string?} reason - the reason why we were return to the lobby.
+     */
+    RETURNED_TO_LOBBY = 'xmpp.returned_to_lobby',
+
     // Designates an event indicating that our role in the XMPP MUC has changed.
     LOCAL_ROLE_CHANGED = 'xmpp.localrole_changed',
 

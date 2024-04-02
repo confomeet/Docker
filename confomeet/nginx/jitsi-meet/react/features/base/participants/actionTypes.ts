@@ -34,6 +34,16 @@ export const GRANT_MODERATOR = 'GRANT_MODERATOR';
 export const KICK_PARTICIPANT = 'KICK_PARTICIPANT';
 
 /**
+ * Create an action for returning a participant to the lobby.
+ *
+ * {
+ *     type: RETURN_PARTICIPANT_TO_LOBBY,
+ *     reason: string
+ * }
+ */
+export const RETURN_PARTICIPANT_TO_LOBBY = 'RETURN_PARTICIPANT_TO_LOBBY';
+
+/**
  * Create an action for muting a remote participant.
  *
  * {
@@ -102,6 +112,16 @@ export const PARTICIPANT_JOINED = 'PARTICIPANT_JOINED';
  * }
  */
 export const PARTICIPANT_KICKED = 'PARTICIPANT_KICKED';
+
+/**
+ * Action to signal that a participant has been returned to prejoin lobby.
+ *
+ * {
+ *     type: PARTICIPANT_RETURNED_TO_LOBBY,
+ *     reason: string
+ * }
+ */
+export const PARTICIPANT_RETURNED_TO_LOBBY = 'PARTICIPANT_RETURNED_TO_LOBBY';
 
 /**
  * Action to handle case when participant lefts.

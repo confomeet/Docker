@@ -202,6 +202,16 @@ export const ENDPOINT_MESSAGE_RECEIVED = 'ENDPOINT_MESSAGE_RECEIVED';
 export const KICKED_OUT = 'KICKED_OUT';
 
 /**
+ * The type of action which signals that the user has been returned to the lobby.
+ *
+ * {
+ *     type: RETURNED_TO_LOBBY,
+ *     conference: JitsiConference
+ * }
+ */
+export const RETURNED_TO_LOBBY = 'RETURNED_TO_LOBBY';
+
+/**
  * The type of (redux) action which signals that the lock state of a specific
  * {@code JitsiConference} changed.
  *

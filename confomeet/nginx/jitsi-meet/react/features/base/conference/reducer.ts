@@ -98,6 +98,7 @@ export interface IJitsiConference {
     join: Function;
     joinLobby: Function;
     kickParticipant: Function;
+    returnParticipantToLobby: Function;
     leave: Function;
     lobbyApproveAccess: Function;
     lobbyDenyAccess: Function;

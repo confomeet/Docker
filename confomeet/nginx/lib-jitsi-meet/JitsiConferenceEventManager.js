@@ -310,6 +310,8 @@ JitsiConferenceEventManager.prototype.setupChatRoomListeners = function() {
 
     chatRoom.addListener(XMPPEvents.KICKED,
         conference.onMemberKicked.bind(conference));
+    chatRoom.addListener(XMPPEvents.RETURNED_TO_LOBBY,
+        conference.onReturnedParticipantToLobby.bind(conference));
     chatRoom.addListener(XMPPEvents.SUSPEND_DETECTED,
         conference.onSuspendDetected.bind(conference));
 

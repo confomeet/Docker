@@ -46,6 +46,8 @@ export default class MucConnectionPlugin extends ConnectionPluginListenable {
             'http://jitsi.org/jitmeet/video', 'iq', 'set', null, null);
         this.connection.addHandler(this.onVisitors.bind(this),
             'jitsi:visitors', 'iq', 'set', null, null);
+        this.connection.addHandler(this.onReturnToLobby.bind(this),
+            'confomeet/lobby', 'iq', 'set', null, null);
     }
 
     /**
@@ -234,6 +236,19 @@ export default class MucConnectionPlugin extends ConnectionPluginListenable {
                 this.xmpp.eventEmitter.emit(XMPPEvents.VISITORS_REJECTION);
             }
         }
+
+        return true;
+    }
+
+    onReturnToLobby(iq) {
+        const from = iq.getAttribute('from');
+        const reason = $(iq).find('>reason').first().text();
+        console.info(`onReturnToLobby: ${from}   ${reason}`);
+
+        const conferenceJid = Strophe.getBareJidFromJid(from);
+        const room = this.rooms[conferenceJid];
+        if (room)
+            room.onReturnToLobby(from, reason);
 
         return true;
     }

@@ -6,6 +6,7 @@ import {
     PARTICIPANT_JOINED,
     PARTICIPANT_KICKED,
     PARTICIPANT_LEFT,
+    PARTICIPANT_RETURNED_TO_LOBBY,
     PARTICIPANT_UPDATED
 } from '../base/participants/actionTypes';
 import MiddlewareRegistry from '../base/redux/MiddlewareRegistry';
@@ -72,6 +73,7 @@ MiddlewareRegistry.register(({ dispatch, getState }: IStore) => (next: Function)
     case PARTICIPANT_JOINED:
     case PARTICIPANT_LEFT:
     case PARTICIPANT_KICKED:
+    case PARTICIPANT_RETURNED_TO_LOBBY:
     case PARTICIPANT_UPDATED: {
         const { pendingReorder } = getState()['features/speaker-stats'];
 

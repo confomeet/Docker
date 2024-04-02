@@ -321,6 +321,13 @@ export enum JitsiConferenceEvents {
     PARTICIPANT_KICKED = 'conference.participant_kicked',
 
     /**
+     * Participant was returned to lobby by the moderator.
+     * @param {JitsiParticipant} the participant that initiated the return.
+     * @param {JitsiParticipant} the participant that was returned.
+     */
+    PARTICIPANT_RETURNED_TO_LOBBY = 'conference.participant_returned_to_lobby',
+
+    /**
      * Indicates that a value of a specific property of a specific participant
      * has changed.
      */
@@ -536,6 +543,7 @@ export const NOISY_MIC = JitsiConferenceEvents.NOISY_MIC;
 export const NON_PARTICIPANT_MESSAGE_RECEIVED = JitsiConferenceEvents.NON_PARTICIPANT_MESSAGE_RECEIVED;
 export const P2P_STATUS = JitsiConferenceEvents.P2P_STATUS;
 export const PARTICIPANT_KICKED = JitsiConferenceEvents.PARTICIPANT_KICKED;
+export const PARTICIPANT_RETURNED_TO_LOBBY = JitsiConferenceEvents.PARTICIPANT_RETURNED_TO_LOBBY;
 export const PARTICIPANT_SOURCE_UPDATED = JitsiConferenceEvents.PARTICIPANT_SOURCE_UPDATED;
 export const PRIVATE_MESSAGE_RECEIVED = JitsiConferenceEvents.PRIVATE_MESSAGE_RECEIVED;
 export const PARTCIPANT_FEATURES_CHANGED = JitsiConferenceEvents.PARTCIPANT_FEATURES_CHANGED;

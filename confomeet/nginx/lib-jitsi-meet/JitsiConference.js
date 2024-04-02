@@ -1675,6 +1675,20 @@ JitsiConference.prototype.kickParticipant = function(id, reason) {
 };
 
 /**
+ * Return participant of the current conference to the prejoin lobby.
+ * @param {string} id id of the participant.
+ * @param {string?} reason reason why the participant is returned to lobby.
+ */
+JitsiConference.prototype.returnParticipantToLobby = function(id, reason) {
+    console.debug(`JitsiConference.returnParticipantToLobby(${id}, ${reason})`);
+    const participant = this.getParticipantById(id);
+    console.debug("participant=", participant);
+    if (!participant)
+        return;
+    this.room.returnToLobby(participant.getJid(), reason);
+}
+
+/**
  * Maybe clears the timeout which emits {@link ACTION_JINGLE_SI_TIMEOUT}
  * analytics event.
  * @private
@@ -1947,6 +1961,19 @@ JitsiConference.prototype.onMemberKicked = function(
 
     this.eventEmitter.emit(
         JitsiConferenceEvents.PARTICIPANT_KICKED, actorParticipant, kickedParticipant, reason);
+};
+
+/**
+ * Designates an event indicating that we were returned to the prejoin lobby.
+ * @param {string} actorJid the id of initiator.
+ * @param {string} returnedToLobbyPartJid the id of participant who was returned to lobby.
+ * @param {string?} reason reason of an action.
+ */
+JitsiConference.prototype.onReturnedParticipantToLobby = function(actorJid, reason) {
+    const actorParticipant = this.participants.get(actorJid);
+
+    this.eventEmitter.emit(
+        JitsiConferenceEvents.PARTICIPANT_RETURNED_TO_LOBBY, actorParticipant, reason);
 };
 
 /**

@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 
-import { ENDPOINT_MESSAGE_RECEIVED, KICKED_OUT } from '../base/conference/actionTypes';
+import { ENDPOINT_MESSAGE_RECEIVED, KICKED_OUT, RETURNED_TO_LOBBY } from '../base/conference/actionTypes';
 import { hangup } from '../base/connection/actions.web';
 import { getParticipantDisplayName } from '../base/participants/functions';
 import MiddlewareRegistry from '../base/redux/MiddlewareRegistry';
@@ -33,6 +33,10 @@ MiddlewareRegistry.register(store => next => action => {
         dispatch(hangup(true, i18next.t('dialog.kickTitle', { participantDisplayName })));
 
         break;
+    }
+
+    case RETURNED_TO_LOBBY: {
+        APP.conference.returnToLobby(action.reason);
     }
     }
 

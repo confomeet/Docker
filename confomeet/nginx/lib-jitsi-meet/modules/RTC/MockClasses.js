@@ -315,6 +315,7 @@ export class MockJitsiLocalTrack {
      * A constructor
      */
     constructor(height, mediaType, videoType) {
+        this.resolution = height;
         this.track = new MockTrack(height);
         this.type = mediaType;
         this.videoType = videoType;
@@ -326,6 +327,14 @@ export class MockJitsiLocalTrack {
      */
     getHeight() {
         return this.track.height;
+    }
+
+    /**
+     * Returns the capture resolution.
+     * @returns {number}
+     */
+    getCaptureResolution() {
+        return this.getHeight();
     }
 
     /**

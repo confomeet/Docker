@@ -12,6 +12,7 @@ import { XMPPEvents } from '../../service/xmpp/XMPPEvents';
 import Settings from '../settings/Settings';
 import EventEmitterForwarder from '../util/EventEmitterForwarder';
 import Listenable from '../util/Listenable';
+import { getJitterDelay } from '../util/Retry';
 
 import AVModeration from './AVModeration';
 import BreakoutRooms from './BreakoutRooms';
@@ -20,6 +21,12 @@ import RoomMetadata from './RoomMetadata';
 import XmppConnection from './XmppConnection';
 
 const logger = getLogger(__filename);
+
+/**
+ * How long we're going to wait for IQ response, before timeout error is triggered.
+ * @type {number}
+ */
+const IQ_TIMEOUT = 10000;
 
 export const parser = {
     packet2JSON(xmlElement, nodes) {
@@ -190,6 +197,7 @@ export default class ChatRoom extends Listenable {
 
         this.locked = false;
         this.transcriptionStatus = JitsiTranscriptionStatus.OFF;
+        this.initialDiscoRoomInfoReceived = false;
     }
 
     /* eslint-enable max-params */
@@ -364,6 +372,15 @@ export default class ChatRoom extends Listenable {
                 logger.warn('No meeting ID from backend');
             }
 
+            const meetingCreatedTSValEl
+                = $(result).find('>query>x[type="result"]>field[var="muc#roominfo_created_timestamp"]>value');
+
+            if (meetingCreatedTSValEl.length) {
+                this.eventEmitter.emit(XMPPEvents.CONFERENCE_TIMESTAMP_RECEIVED, meetingCreatedTSValEl.text());
+            } else {
+                logger.warn('No conference duration from backend');
+            }
+
             const membersOnly = $(result).find('>query>feature[var="muc_membersonly"]').length === 1;
 
             const lobbyRoomField
@@ -391,6 +408,14 @@ export default class ChatRoom extends Listenable {
                 this.eventEmitter.emit(XMPPEvents.MUC_MEMBERS_ONLY_CHANGED, membersOnly);
             }
 
+            const visitorsSupported = $(result)
+                .find('>query>x[type="result"]>field[var="muc#roominfo_visitorsEnabled"]>value').text() === '1';
+
+            if (visitorsSupported !== this.visitorsSupported) {
+                this.visitorsSupported = visitorsSupported;
+                this.eventEmitter.emit(XMPPEvents.MUC_VISITORS_SUPPORTED_CHANGED, visitorsSupported);
+            }
+
             const roomMetadataEl
                 = $(result).find('>query>x[type="result"]>field[var="muc#roominfo_jitsimetadata"]>value');
             const roomMetadataText = roomMetadataEl?.text();
@@ -402,9 +427,14 @@ export default class ChatRoom extends Listenable {
                     logger.warn('Failed to set room metadata', e);
                 }
             }
+
+            this.initialDiscoRoomInfoReceived = true;
+            this.eventEmitter.emit(XMPPEvents.ROOM_DISCO_INFO_UPDATED);
         }, error => {
             logger.error('Error getting room info: ', error);
-        });
+            this.eventEmitter.emit(XMPPEvents.ROOM_DISCO_INFO_FAILED, error);
+        },
+        IQ_TIMEOUT);
     }
 
     /**
@@ -1215,27 +1245,32 @@ export default class ChatRoom extends Listenable {
             } else {
                 logger.warn('onPresError ', pres);
 
-                const txt = $(pres).find('>error[type="cancel"]>text[xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"]');
+                const txtNode = $(pres).find('>error[type="cancel"]>text[xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"]');
+                const txt = txtNode.length && txtNode.text();
 
                 // a race where we have sent a conference request to jicofo and jicofo was about to leave or just left
                 // because of no participants in the room, and we tried to create the room, without having
                 // permissions for that (only jicofo creates rooms)
-                if (txt.length && txt.text() === 'Room creation is restricted') {
+                if (txt === 'Room creation is restricted') {
                     if (!this._roomCreationRetries) {
                         this._roomCreationRetries = 0;
                     }
                     this._roomCreationRetries++;
 
                     if (this._roomCreationRetries <= 3) {
-                        // let's retry inviting jicofo and joining the room
-                        this.join(this.password, this.replaceParticipant);
+                        const retryDelay = getJitterDelay(
+                            /* retry */ this._roomCreationRetries,
+                            /* minDelay */ 300,
+                            1);
+
+                        // let's retry inviting jicofo and joining the room, retries will take between 1 and 3 seconds
+                        setTimeout(() => this.join(this.password, this.replaceParticipant), retryDelay);
 
                         return;
                     }
                 }
 
-                this.eventEmitter.emit(
-                    XMPPEvents.ROOM_CONNECT_NOT_ALLOWED_ERROR);
+                this.eventEmitter.emit(XMPPEvents.ROOM_CONNECT_NOT_ALLOWED_ERROR, txt);
             }
         } else if ($(pres).find('>error>service-unavailable').length) {
             logger.warn('Maximum users limit for the room has been reached',
@@ -1415,22 +1450,21 @@ export default class ChatRoom extends Listenable {
     setMembersOnly(enabled, onSuccess, onError) {
         if (enabled && Object.values(this.members).filter(m => !m.isFocus).length) {
             // first grant membership to all that are in the room
-            // currently there is a bug in prosody where it handles only the first item
-            // that's why we will send iq per member
+            const affiliationsIq = $iq({
+                to: this.roomjid,
+                type: 'set' })
+                .c('query', {
+                    xmlns: 'http://jabber.org/protocol/muc#admin' });
+
             Object.values(this.members).forEach(m => {
                 if (m.jid && !MEMBERS_AFFILIATIONS.includes(m.affiliation)) {
-                    this.xmpp.connection.sendIQ(
-                        $iq({
-                            to: this.roomjid,
-                            type: 'set' })
-                        .c('query', {
-                            xmlns: 'http://jabber.org/protocol/muc#admin' })
-                        .c('item', {
-                            'affiliation': 'member',
-                            'jid': Strophe.getBareJidFromJid(m.jid)
-                        }).up().up());
+                    affiliationsIq.c('item', {
+                        'affiliation': 'member',
+                        'jid': Strophe.getBareJidFromJid(m.jid)
+                    }).up();
                 }
             });
+            this.xmpp.connection.sendIQ(affiliationsIq.up());
         }
 
         const errorCallback = onError ? onError : () => {}; // eslint-disable-line no-empty-function

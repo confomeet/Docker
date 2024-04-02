@@ -135,6 +135,9 @@ JitsiConferenceEventManager.prototype.setupChatRoomListeners = function() {
     this.chatRoomForwarder.forward(XMPPEvents.MEETING_ID_SET,
         JitsiConferenceEvents.CONFERENCE_UNIQUE_ID_SET);
 
+    this.chatRoomForwarder.forward(XMPPEvents.CONFERENCE_TIMESTAMP_RECEIVED,
+        JitsiConferenceEvents.CONFERENCE_CREATED_TIMESTAMP);
+
     // send some analytics events
     chatRoom.addListener(XMPPEvents.MUC_JOINED,
         () => {
@@ -315,6 +318,8 @@ JitsiConferenceEventManager.prototype.setupChatRoomListeners = function() {
 
     this.chatRoomForwarder.forward(XMPPEvents.MUC_MEMBERS_ONLY_CHANGED,
         JitsiConferenceEvents.MEMBERS_ONLY_CHANGED);
+    this.chatRoomForwarder.forward(XMPPEvents.MUC_VISITORS_SUPPORTED_CHANGED,
+        JitsiConferenceEvents.VISITORS_SUPPORTED_CHANGED);
 
     chatRoom.addListener(XMPPEvents.MUC_MEMBER_JOINED,
         conference.onMemberJoined.bind(conference));
@@ -651,11 +656,6 @@ JitsiConferenceEventManager.prototype.setupXMPPListeners = function() {
             });
 
             conference.eventEmitter.emit(JitsiConferenceEvents.STARTED_MUTED);
-        });
-
-    this._addConferenceXMPPListener(XMPPEvents.CONFERENCE_TIMESTAMP_RECEIVED,
-        createdTimestamp => {
-            conference.eventEmitter.emit(JitsiConferenceEvents.CONFERENCE_CREATED_TIMESTAMP, createdTimestamp);
         });
 
     this._addConferenceXMPPListener(XMPPEvents.AV_MODERATION_CHANGED,

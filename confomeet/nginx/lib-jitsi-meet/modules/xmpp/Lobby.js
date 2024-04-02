@@ -63,6 +63,40 @@ export default class Lobby {
             return Promise.reject(new Error('Lobby not supported!'));
         }
 
+        // let's wait for the room data form to be populated after XMPPEvents.MUC_JOINED
+        if (!this.mainRoom.initialDiscoRoomInfoReceived) {
+            return new Promise((resolve, reject) => {
+                let unsubscribers = [];
+                const unsubscribe = () => {
+                    unsubscribers.forEach(remove => remove());
+                    unsubscribers = [];
+                };
+
+                unsubscribers.push(
+                    this.mainRoom.addCancellableListener(XMPPEvents.ROOM_DISCO_INFO_UPDATED, () => {
+                        unsubscribe();
+
+                        if (this.mainRoom.membersOnlyEnabled) {
+                            resolve();
+
+                            return;
+                        }
+
+                        this.mainRoom.setMembersOnly(true, resolve, reject);
+                    }));
+
+                // on timeout or failure
+                unsubscribers.push(this.mainRoom.addCancellableListener(XMPPEvents.ROOM_DISCO_INFO_FAILED, e => {
+                    unsubscribe();
+                    reject(e);
+                }));
+            });
+        }
+
+        if (this.mainRoom.membersOnlyEnabled) {
+            return Promise.resolve();
+        }
+
         return new Promise((resolve, reject) => {
             this.mainRoom.setMembersOnly(true, resolve, reject);
         });
@@ -376,9 +410,9 @@ export default class Lobby {
 
     /**
      * Should be possible only for moderators.
-     * @param id
+     * @param param or an array of ids.
      */
-    approveAccess(id) {
+    approveAccess(param) {
         if (!this.isSupported() || !this.mainRoom.isModerator()) {
             return;
         }
@@ -391,23 +425,38 @@ export default class Lobby {
             mainRoomJid = this.mainRoom.getBreakoutRooms().getMainRoomJid();
         }
 
-        const memberRoomJid = Object.keys(this.lobbyRoom.members)
-            .find(j => Strophe.getResourceFromJid(j) === id);
+        const membersToApprove = [];
+        let ids = param;
 
-        if (memberRoomJid) {
-            const jid = this.lobbyRoom.members[memberRoomJid].jid;
+        if (!Array.isArray(param)) {
+            ids = [ param ];
+        }
+
+        ids.forEach(id => {
+            const memberRoomJid = Object.keys(this.lobbyRoom.members)
+                .find(j => Strophe.getResourceFromJid(j) === id);
+
+            if (memberRoomJid) {
+                membersToApprove.push(this.lobbyRoom.members[memberRoomJid].jid);
+            } else {
+                logger.error(`Not found member for ${memberRoomJid} in lobby room.`);
+            }
+        });
+
+        if (membersToApprove.length > 0) {
             const msgToSend
                 = $msg({ to: mainRoomJid })
-                    .c('x', { xmlns: 'http://jabber.org/protocol/muc#user' })
-                    .c('invite', { to: jid });
+                    .c('x', { xmlns: 'http://jabber.org/protocol/muc#user' });
+
+            membersToApprove.forEach(jid => {
+                msgToSend.c('invite', { to: jid }).up();
+            });
 
             this.xmpp.connection.sendIQ(msgToSend,
                 () => { }, // eslint-disable-line no-empty-function
                 e => {
-                    logger.error(`Error sending invite for ${jid}`, e);
+                    logger.error(`Error sending invite for ${membersToApprove}`, e);
                 });
-        } else {
-            logger.error(`Not found member for ${memberRoomJid} in lobby room.`);
         }
     }
 }

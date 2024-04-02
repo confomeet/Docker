@@ -2,6 +2,7 @@ import { BrowserDetection } from '@jitsi/js-utils';
 
 /* Minimum required Chrome / Chromium version. This applies also to derivatives. */
 const MIN_REQUIRED_CHROME_VERSION = 72;
+const MIN_REQUIRED_FIREFOX_VERSION = 91;
 const MIN_REQUIRED_SAFARI_VERSION = 14;
 const MIN_REQUIRED_IOS_VERSION = 14;
 
@@ -71,7 +72,7 @@ export default class BrowserCapabilities extends BrowserDetection {
         }
 
         return (this.isChromiumBased() && this.isEngineVersionGreaterThan(MIN_REQUIRED_CHROME_VERSION - 1))
-            || this.isFirefox()
+            || (this.isFirefox() && this.isVersionGreaterThan(MIN_REQUIRED_FIREFOX_VERSION - 1))
             || this.isReactNative()
             || this.isWebKitBased();
     }
@@ -137,6 +138,15 @@ export default class BrowserCapabilities extends BrowserDetection {
             // this is not working on Safari because of the following bug
             // https://bugs.webkit.org/show_bug.cgi?id=215567
             && !this.isWebKitBased();
+    }
+
+    /**
+     * Returns true if the browser supports Dependency Descriptor header extension.
+     *
+     * @returns {boolean}
+     */
+    supportsDDExtHeaders() {
+        return !this.isFirefox();
     }
 
     /**
@@ -287,17 +297,6 @@ export default class BrowserCapabilities extends BrowserDetection {
             && window.RTCRtpReceiver
             && window.RTCRtpReceiver.getCapabilities
             && window.RTCRtpReceiver.getCapabilities('audio').codecs.some(codec => codec.mimeType === 'audio/red'));
-    }
-
-    /**
-     * Checks if the browser supports unified plan.
-     *
-     * @returns {boolean}
-     */
-    supportsUnifiedPlan() {
-        // We do not want to enable unified plan on Electron clients that have Chromium version < 96 because of
-        // performance and screensharing issues.
-        return !(this.isElectron() && this.isEngineVersionLessThan(96));
     }
 
     /**

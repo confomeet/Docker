@@ -9,6 +9,7 @@ import { isLocalParticipantModerator } from '../../../../base/participants/funct
 import Dialog from '../../../../base/ui/components/web/Dialog';
 import E2EESection from '../../../../e2ee/components/E2EESection';
 import LobbySection from '../../../../lobby/components/web/LobbySection';
+import { isEnablingLobbyAllowed } from '../../../../lobby/functions';
 
 import PasswordSection from './PasswordSection';
 
@@ -18,11 +19,6 @@ export interface INotifyClick {
 }
 
 interface IProps {
-
-    /**
-     * Toolbar buttons which have their click exposed through the API.
-     */
-    _buttonsWithNotifyClick: Array<string | INotifyClick>;
 
     /**
      * Whether or not the current user can modify the current password.
@@ -39,6 +35,11 @@ interface IProps {
      * Whether to hide the lobby password section.
      */
     _disableLobbyPassword?: boolean;
+
+    /**
+     * Whether to hide the lobby section.
+     */
+    _isEnablingLobbyAllowed: boolean;
 
     /**
      * The value for how the conference is locked (or undefined if not locked)
@@ -73,10 +74,10 @@ interface IProps {
  * @returns {React$Element<any>}
  */
 function SecurityDialog({
-    _buttonsWithNotifyClick,
     _canEditPassword,
     _conference,
     _disableLobbyPassword,
+    _isEnablingLobbyAllowed,
     _locked,
     _password,
     _passwordNumberOfDigits,
@@ -97,25 +98,28 @@ function SecurityDialog({
             ok = {{ hidden: true }}
             titleKey = 'security.title'>
             <div className = 'security-dialog'>
-                <LobbySection />
-                {!_disableLobbyPassword && (
-                    <>
-                        <div className = 'separator-line' />
-                        <PasswordSection
-                            buttonsWithNotifyClick = { _buttonsWithNotifyClick }
-                            canEditPassword = { _canEditPassword }
-                            conference = { _conference }
-                            locked = { _locked }
-                            password = { _password }
-                            passwordEditEnabled = { passwordEditEnabled }
-                            passwordNumberOfDigits = { _passwordNumberOfDigits }
-                            setPassword = { setPassword }
-                            setPasswordEditEnabled = { setPasswordEditEnabled } />
-                    </>
-                )}
+                {
+                    _isEnablingLobbyAllowed && <LobbySection />
+                }
+                {
+                    !_disableLobbyPassword && (
+                        <>
+                            { _isEnablingLobbyAllowed && <div className = 'separator-line' /> }
+                            <PasswordSection
+                                canEditPassword = { _canEditPassword }
+                                conference = { _conference }
+                                locked = { _locked }
+                                password = { _password }
+                                passwordEditEnabled = { passwordEditEnabled }
+                                passwordNumberOfDigits = { _passwordNumberOfDigits }
+                                setPassword = { setPassword }
+                                setPasswordEditEnabled = { setPasswordEditEnabled } />
+                        </>
+                    )
+                }
                 {
                     _showE2ee ? <>
-                        <div className = 'separator-line' />
+                        { (_isEnablingLobbyAllowed || !_disableLobbyPassword) && <div className = 'separator-line' /> }
                         <E2EESection />
                     </> : null
                 }
@@ -140,20 +144,18 @@ function mapStateToProps(state: IReduxState) {
         locked,
         password
     } = state['features/base/conference'];
-    const {
-        roomPasswordNumberOfDigits,
-        buttonsWithNotifyClick
-    } = state['features/base/config'];
+    const { roomPasswordNumberOfDigits } = state['features/base/config'];
     const { disableLobbyPassword } = getSecurityUiConfig(state);
+    const _isEnablingLobbyAllowed = isEnablingLobbyAllowed(state);
 
     const showE2ee = Boolean(e2eeSupported) && isLocalParticipantModerator(state);
 
     return {
-        _buttonsWithNotifyClick: buttonsWithNotifyClick ?? [],
         _canEditPassword: isLocalParticipantModerator(state),
         _conference: conference,
         _dialIn: state['features/invite'],
         _disableLobbyPassword: disableLobbyPassword,
+        _isEnablingLobbyAllowed,
         _locked: locked,
         _password: password,
         _passwordNumberOfDigits: roomPasswordNumberOfDigits,

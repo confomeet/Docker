@@ -4,7 +4,7 @@ import 'webrtc-adapter';
 
 import JitsiTrackError from '../../JitsiTrackError';
 import * as JitsiTrackErrors from '../../JitsiTrackErrors';
-import CameraFacingMode from '../../service/RTC/CameraFacingMode';
+import { CameraFacingMode } from '../../service/RTC/CameraFacingMode';
 import RTCEvents from '../../service/RTC/RTCEvents';
 import Resolutions from '../../service/RTC/Resolutions';
 import { VideoType } from '../../service/RTC/VideoType';
@@ -515,6 +515,7 @@ class RTCUtils extends Listenable {
         } = options;
 
         const mediaStreamsMetaData = [];
+        let constraints = {};
 
         // Declare private functions to be used in the promise chain below.
         // These functions are declared in the scope of this function because
@@ -558,7 +559,7 @@ class RTCUtils extends Listenable {
                 }
 
                 const requestedDevices = [ 'video' ];
-                const constraints = {
+                const deviceConstraints = {
                     video: {
                         deviceId: matchingDevice.deviceId
 
@@ -566,7 +567,7 @@ class RTCUtils extends Listenable {
                     }
                 };
 
-                return this._getUserMedia(requestedDevices, constraints, timeout)
+                return this._getUserMedia(requestedDevices, deviceConstraints, timeout)
                     .then(stream => {
                         return {
                             sourceType: 'device',
@@ -637,7 +638,7 @@ class RTCUtils extends Listenable {
                 return Promise.resolve();
             }
 
-            const constraints = getConstraints(requestedCaptureDevices, otherOptions);
+            constraints = getConstraints(requestedCaptureDevices, otherOptions);
 
             logger.info('Got media constraints: ', JSON.stringify(constraints));
 
@@ -664,6 +665,7 @@ class RTCUtils extends Listenable {
                 const audioStream = new MediaStream(audioTracks);
 
                 mediaStreamsMetaData.push({
+                    constraints: constraints.audio,
                     stream: audioStream,
                     track: audioStream.getAudioTracks()[0],
                     effects: otherOptions.effects
@@ -676,6 +678,7 @@ class RTCUtils extends Listenable {
                 const videoStream = new MediaStream(videoTracks);
 
                 mediaStreamsMetaData.push({
+                    constraints: constraints.video,
                     stream: videoStream,
                     track: videoStream.getVideoTracks()[0],
                     videoType: VideoType.CAMERA,
@@ -831,15 +834,31 @@ class RTCUtils extends Listenable {
     getEventDataForActiveDevice(device) {
         const deviceList = [];
         const deviceData = {
-            'deviceId': device.deviceId,
-            'kind': device.kind,
-            'label': device.label,
-            'groupId': device.groupId
+            deviceId: device.deviceId,
+            kind: device.kind,
+            label: device.label,
+            groupId: device.groupId
         };
 
         deviceList.push(deviceData);
 
         return { deviceList };
+    }
+
+    /**
+     * Returns <tt>true<tt/> if a WebRTC MediaStream identified by given stream
+     * ID is considered a valid "user" stream which means that it's not a
+     * "receive only" stream nor a "mixed" JVB stream.
+     *
+     * Clients that implement Unified Plan, such as Firefox use recvonly
+     * "streams/channels/tracks" for receiving remote stream/tracks, as opposed
+     * to Plan B where there are only 3 channels: audio, video and data.
+     *
+     * @param {string} streamId The id of WebRTC MediaStream.
+     * @returns {boolean}
+     */
+    isUserStreamById(streamId) {
+        return streamId && streamId !== 'mixedmslabel' && streamId !== 'default';
     }
 }
 

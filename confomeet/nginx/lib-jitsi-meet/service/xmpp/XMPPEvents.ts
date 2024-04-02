@@ -173,6 +173,9 @@ export enum XMPPEvents {
     // Designates an event indicating that the MUC members only config has changed.
     MUC_MEMBERS_ONLY_CHANGED = 'xmpp.muc_members_only_changed',
 
+    // Designates an event indicating that the MUC visitors support has changed.
+    MUC_VISITORS_SUPPORTED_CHANGED = 'xmpp.muc_visitors_supported_changed',
+
     // Designates an event indicating that a participant in the XMPP MUC has
     // advertised that they have audio muted (or unmuted).
     PARTICIPANT_AUDIO_MUTED = 'xmpp.audio_muted',
@@ -222,6 +225,12 @@ export enum XMPPEvents {
     ROOM_CONNECT_NOT_ALLOWED_ERROR = 'xmpp.room_connect_error.not_allowed',
     ROOM_JOIN_ERROR = 'xmpp.room_join_error',
     ROOM_CONNECT_MEMBERS_ONLY_ERROR = 'xmpp.room_connect_error.members_only',
+
+    /**
+     * Indicates that we have received a reply to our disco-info request for the room.
+     */
+    ROOM_DISCO_INFO_UPDATED = 'xmpp.room_disco_info_updated',
+    ROOM_DISCO_INFO_FAILED = 'xmpp.room_disco_info_failed',
 
     /**
      * Indicates that max users limit has been reached.

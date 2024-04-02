@@ -10,7 +10,7 @@ import {
     NO_DATA_FROM_SOURCE,
     TRACK_MUTE_CHANGED
 } from '../../JitsiTrackEvents';
-import CameraFacingMode from '../../service/RTC/CameraFacingMode';
+import { CameraFacingMode } from '../../service/RTC/CameraFacingMode';
 import { MediaType } from '../../service/RTC/MediaType';
 import RTCEvents from '../../service/RTC/RTCEvents';
 import { VideoType } from '../../service/RTC/VideoType';
@@ -20,7 +20,6 @@ import {
     createNoDataFromSourceEvent
 } from '../../service/statistics/AnalyticsEvents';
 import browser from '../browser';
-import FeatureFlags from '../flags/FeatureFlags';
 import Statistics from '../statistics/statistics';
 
 import JitsiTrack from './JitsiTrack';
@@ -38,13 +37,13 @@ export default class JitsiLocalTrack extends JitsiTrack {
      *
      * @constructor
      * @param {Object} trackInfo
+     * @param {Object} trackInfo.constraints - The contraints used for creating the track.
      * @param {number} trackInfo.rtcId - The ID assigned by the RTC module.
      * @param {Object} trackInfo.stream - The WebRTC MediaStream, parent of the track.
      * @param {Object} trackInfo.track - The underlying WebRTC MediaStreamTrack for new JitsiLocalTrack.
      * @param {string} trackInfo.mediaType - The MediaType of the JitsiLocalTrack.
      * @param {string} trackInfo.videoType - The VideoType of the JitsiLocalTrack.
      * @param {Array<Object>} trackInfo.effects - The effects to be applied to the JitsiLocalTrack.
-     * @param {number} trackInfo.resolution - The the video resolution if it's a video track
      * @param {string} trackInfo.deviceId - The ID of the local device for this track.
      * @param {string} trackInfo.facingMode - Thehe camera facing mode used in getUserMedia call (for mobile only).
      * @param {string} trackInfo.sourceId - The id of the desktop sharing source, which is the Chrome media source ID,
@@ -52,10 +51,10 @@ export default class JitsiLocalTrack extends JitsiTrack {
      * @param {string} trackInfo.sourceType - The type of source the track originates from.
      */
     constructor({
+        constraints,
         deviceId,
         facingMode,
         mediaType,
-        resolution,
         rtcId,
         sourceId,
         sourceType,
@@ -101,21 +100,35 @@ export default class JitsiLocalTrack extends JitsiTrack {
         this.sourceId = sourceId;
         this.sourceType = sourceType ?? displaySurface;
 
-        // Get the resolution from the track itself because it cannot be
-        // certain which resolution webrtc has fallen back to using.
-        this.resolution = this.getHeight();
-        this.maxEnabledResolution = resolution;
-
         // Cache the constraints of the track in case of any this track
         // model needs to call getUserMedia again, such as when unmuting.
         this._constraints = track.getConstraints();
 
-        // Safari returns an empty constraints object, construct the constraints using getSettings.
-        if (!Object.keys(this._constraints).length && videoType === VideoType.CAMERA) {
-            this._constraints = {
-                height: this.getHeight(),
-                width: this.getWidth()
-            };
+        if (mediaType === MediaType.VIDEO) {
+            if (videoType === VideoType.CAMERA) {
+                // Safari returns an empty constraints object, construct the constraints using getSettings.
+                if (!Object.keys(this._constraints).length) {
+                    this._constraints = {
+                        height: { ideal: this.getHeight() },
+                        width: { ideal: this.getWidth() }
+                    };
+                }
+
+                // If the constraints are still empty, fallback to the constraints used for initial gUM.
+                if (isNaN(this._constraints.height.ideal) && isNaN(this._constraints.width.ideal)) {
+                    this._constraints.height = { ideal: constraints.height.ideal };
+                    this._constraints.width = { ideal: constraints.width.ideal };
+                }
+            }
+
+            // Get the resolution from the track itself since we do not know what camera capability the browser has
+            // picked for the given constraints, fallback to the constraints if MediaStreamTrack.getSettings() doesn't
+            // return the height.
+            this.resolution = this.getHeight();
+            if (isNaN(this.resolution) && this._constraints.height?.ideal) {
+                this.resolution = this._constraints.height.ideal;
+            }
+            this.maxEnabledResolution = this.resolution;
         }
 
         this.deviceId = deviceId;
@@ -354,8 +367,7 @@ export default class JitsiLocalTrack extends JitsiTrack {
      * @returns {Promise}
      */
     _setMuted(muted) {
-        if (this.isMuted() === muted
-            && !(this.videoType === VideoType.DESKTOP && FeatureFlags.isMultiStreamSendSupportEnabled())) {
+        if (this.isMuted() === muted && this.videoType !== VideoType.DESKTOP) {
             return Promise.resolve();
         }
 
@@ -377,9 +389,7 @@ export default class JitsiLocalTrack extends JitsiTrack {
         // conference. This is needed because we don't want the client to signal a source-remove to the remote peer for
         // the desktop track when screenshare is stopped. Later when screenshare is started again, the same sender will
         // be re-used without the need for signaling a new ssrc through source-add.
-        if (this.isAudioTrack()
-                || (this.videoType === VideoType.DESKTOP && !FeatureFlags.isMultiStreamSendSupportEnabled())
-                || !doesVideoMuteByStreamRemove) {
+        if (this.isAudioTrack() || !doesVideoMuteByStreamRemove) {
             logMuteInfo();
 
             // If we have a stream effect that implements its own mute functionality, prioritize it before
@@ -508,14 +518,6 @@ export default class JitsiLocalTrack extends JitsiTrack {
      */
     _setStream(stream) {
         super._setStream(stream);
-
-        if (stream) {
-            // Store the MSID for video mute/unmute purposes.
-            this.storedMSID = this.getMSID();
-            logger.debug(`Setting new MSID: ${this.storedMSID} on ${this}`);
-        } else {
-            logger.debug(`Setting 'null' stream on ${this}`);
-        }
     }
 
     /**
@@ -655,6 +657,19 @@ export default class JitsiLocalTrack extends JitsiTrack {
         }
 
         return undefined;
+    }
+
+    /**
+     * Returns the capture resolution of the video track.
+     *
+     * @returns {Number}
+     */
+    getCaptureResolution() {
+        if (this.videoType === VideoType.CAMERA || !browser.isWebKitBased()) {
+            return this.resolution;
+        }
+
+        return this.getHeight();
     }
 
     /**

@@ -84,7 +84,7 @@ export default class JitsiTrack extends EventEmitter {
      * @param {Function} handler the handler
      */
     _addMediaStreamInactiveHandler(handler) {
-        if (browser.isFirefox()) {
+        if (browser.isFirefox() || browser.isWebKitBased()) {
             this.track.onended = handler;
         } else {
             this.stream.oninactive = handler;
@@ -274,17 +274,6 @@ export default class JitsiTrack extends EventEmitter {
      */
     getId() {
         return this.getStreamId();
-    }
-
-    /**
-     * Returns the msid of the stream attached to the JitsiTrack object or null
-     * if no stream is attached.
-     */
-    getMSID() {
-        const streamId = this.getStreamId();
-        const trackId = this.getTrackId();
-
-        return streamId && trackId ? `${streamId} ${trackId}` : null;
     }
 
     /**

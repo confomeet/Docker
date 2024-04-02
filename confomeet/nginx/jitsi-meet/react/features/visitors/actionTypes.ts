@@ -38,3 +38,23 @@ export const VISITOR_PROMOTION_REQUEST = 'VISITOR_PROMOTION_REQUEST';
  * }
  */
 export const CLEAR_VISITOR_PROMOTION_REQUEST = 'CLEAR_VISITOR_PROMOTION_REQUEST';
+
+/**
+ * The type of (redux) action which sets visitor demote actor.
+ *
+ * {
+ *     type: SET_VISITOR_DEMOTE_ACTOR,
+ *     displayName: string
+ * }
+ */
+export const SET_VISITOR_DEMOTE_ACTOR = 'SET_VISITOR_DEMOTE_ACTOR';
+
+/**
+ * The type of (redux) action which sets visitors support.
+ *
+ * {
+ *     type: SET_VISITORS_SUPPORTED,
+ *     value: string
+ * }
+ */
+export const SET_VISITORS_SUPPORTED = 'SET_VISITORS_SUPPORTED';

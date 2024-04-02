@@ -47,6 +47,7 @@ let rtcTrackIdCounter = 0;
 function _createLocalTracks(mediaStreamMetaData = []) {
     return mediaStreamMetaData.map(metaData => {
         const {
+            constraints,
             sourceId,
             sourceType,
             stream,
@@ -63,6 +64,7 @@ function _createLocalTracks(mediaStreamMetaData = []) {
         rtcTrackIdCounter = safeCounterIncrement(rtcTrackIdCounter);
 
         return new JitsiLocalTrack({
+            constraints,
             deviceId,
             facingMode,
             mediaType: track.kind,
@@ -363,7 +365,6 @@ export default class RTC extends Listenable {
      * enabled on the PeerConnection.
      * @param {boolean} options.forceTurnRelay If set to true, the browser will generate only Relay ICE candidates.
      * @param {boolean} options.startSilent If set to 'true' no audio will be sent or received.
-     * @param {boolean} options.usesUnifiedPlan Indicates if the  browser is running in unified plan mode.
      * @param {Object} options.videoQuality - Quality settings to applied on the outbound video streams.
      * @return {TraceablePeerConnection}
      */
@@ -373,14 +374,6 @@ export default class RTC extends Listenable {
         if (options.enableInsertableStreams) {
             logger.debug('E2EE - setting insertable streams constraints');
             pcConfig.encodedInsertableStreams = true;
-        }
-
-        // TODO: remove this.
-        const supportsSdpSemantics = browser.isChromiumBased() && !options.usesUnifiedPlan;
-
-        if (supportsSdpSemantics) {
-            logger.debug('WebRTC application is running in plan-b mode');
-            pcConfig.sdpSemantics = 'plan-b';
         }
 
         if (options.forceTurnRelay) {
@@ -659,39 +652,6 @@ export default class RTC extends Listenable {
      */
     static setAudioOutputDevice(deviceId) {
         return RTCUtils.setAudioOutputDevice(deviceId);
-    }
-
-    /**
-     * Returns <tt>true<tt/> if given WebRTC MediaStream is considered a valid
-     * "user" stream which means that it's not a "receive only" stream nor a
-     * "mixed" JVB stream.
-     *
-     * Clients that implement Unified Plan, such as Firefox use recvonly
-     * "streams/channels/tracks" for receiving remote stream/tracks, as opposed
-     * to Plan B where there are only 3 channels: audio, video and data.
-     *
-     * @param {MediaStream} stream The WebRTC MediaStream instance.
-     * @returns {boolean}
-     */
-    static isUserStream(stream) {
-        return RTC.isUserStreamById(stream.id);
-    }
-
-    /**
-     * Returns <tt>true<tt/> if a WebRTC MediaStream identified by given stream
-     * ID is considered a valid "user" stream which means that it's not a
-     * "receive only" stream nor a "mixed" JVB stream.
-     *
-     * Clients that implement Unified Plan, such as Firefox use recvonly
-     * "streams/channels/tracks" for receiving remote stream/tracks, as opposed
-     * to Plan B where there are only 3 channels: audio, video and data.
-     *
-     * @param {string} streamId The id of WebRTC MediaStream.
-     * @returns {boolean}
-     */
-    static isUserStreamById(streamId) {
-        return streamId && streamId !== 'mixedmslabel'
-            && streamId !== 'default';
     }
 
     /**

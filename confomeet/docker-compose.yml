@@ -45,6 +45,8 @@ services:
       CONFOMEET_S3_CLIENT_ID: ${CONFOMEET_S3_CLIENT_ID}
       CONFOMEET_S3_CLIENT_SECRET: ${CONFOMEET_S3_CLIENT_SECRET}
       CONFOMEET_S3_REGION: ${CONFOMEET_S3_REGION}
+      oidc__authority: ${OIDC_AUTHORITY}
+      oidc__client_id: ${OIDC_CLIENT_ID}
     networks:
       - confomeetnet
     restart: unless-stopped

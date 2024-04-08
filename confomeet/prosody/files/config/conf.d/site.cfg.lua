@@ -1,5 +1,3 @@
-asap_accepted_issuers = ${PROSODY_ACCEPTED_ISSUERS}
-asap_accepted_audiences = ${PROSODY_ACCEPTED_AUDIENCES}
 -- domain mapper options, must at least have domain base set to use the mapper
 muc_mapper_domain_base = "${XMPP_DOMAIN}";
 main_muc = "conference.${XMPP_DOMAIN}";

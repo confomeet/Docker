@@ -57,11 +57,13 @@ VirtualHost "${XMPP_DOMAIN}"
         "end_conference";
         "av_moderation";
         "presence_identity";
+        "muc_breakout_rooms";
     }
     lobby_muc = "lobby.${XMPP_DOMAIN}"
     room_metadata_component = "metadata.${XMPP_DOMAIN}"
     main_muc = "conference.${XMPP_DOMAIN}"
     conference_logger_url = "http://${admin_backend}/api/v1/ConfEvent/AddProsodyEvent"
+    breakout_rooms_muc = "breakout.${XMPP_DOMAIN}"
 
 
 Component "conference.${XMPP_DOMAIN}" "muc"
@@ -144,3 +146,10 @@ VirtualHost "recorder.${XMPP_DOMAIN}"
     "ping";
   }
   authentication = "internal_plain"
+
+Component "breakout.${XMPP_DOMAIN}" "muc"
+    restrict_room_creation = true
+    storage = "memory"
+    admins = { "focus@auth.${XMPP_DOMAIN}" }
+    muc_room_locking = false
+    muc_room_default_public_jids = true

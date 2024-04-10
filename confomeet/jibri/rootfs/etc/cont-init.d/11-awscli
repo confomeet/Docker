@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+mkdir -p /home/jibri/.aws
+tpl /defaults/aws-credentials.conf >/home/jibri/.aws/credentials
+tpl /defaults/aws-config.conf >/home/jibri/.aws/config

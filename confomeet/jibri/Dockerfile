@@ -1,5 +1,6 @@
 ARG JITSI_REPO=jitsi
-ARG BASE_TAG=stable
+ARG BASE_TAG=latest
+
 FROM ${JITSI_REPO}/base-java:${BASE_TAG}
 
 LABEL org.opencontainers.image.title="Jitsi Broadcasting Infrastructure (jibri)"
@@ -8,23 +9,26 @@ LABEL org.opencontainers.image.url="https://github.com/jitsi/jibri"
 LABEL org.opencontainers.image.source="https://github.com/jitsi/docker-jitsi-meet"
 LABEL org.opencontainers.image.documentation="https://jitsi.github.io/handbook/"
 
-ARG TARGETPLATFORM
 ARG USE_CHROMIUM=0
-ARG CHROME_RELEASE=120.0.6099.109
-
-ARG XMPP_DOMAIN
-ENV XMPP_DOMAIN =${XMPP_DOMAIN}
+#ARG CHROME_RELEASE=latest
+# https://googlechromelabs.github.io/chrome-for-testing/
+ARG CHROME_RELEASE=121.0.6167.85
 
 COPY rootfs/ /
 
 RUN apt-dpkg-wrap apt-get update && \
-    apt-dpkg-wrap apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" jibri libgl1-mesa-dri procps jitsi-upload-integrations jq pulseaudio dbus dbus-x11 rtkit unzip && \
+    apt-dpkg-wrap apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" jibri libgl1-mesa-dri procps jitsi-upload-integrations jitsi-autoscaler-sidecar jq pulseaudio dbus dbus-x11 rtkit unzip fonts-noto && \
     /usr/bin/install-chrome.sh && \
+    /usr/bin/install-awscli.sh && \
     apt-cleanup && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" && \
-    unzip /tmp/awscliv2.zip -d /tmp/awscliv2 && \
-    /tmp/awscliv2/aws/install && \
-    rm -rf /tmp/awscliv2* && \
-    usermod -aG adm,audio,video,plugdev,rtkit jibri
+    adduser jibri rtkit && \
+    dpkgArch="$(dpkg --print-architecture)" && \
+    case "${dpkgArch##*-}" in \
+        "amd64") SC_ARCH=x86_64 ;; \
+        "arm64") SC_ARCH=aarch64 ;; \
+        *) echo "unsupported architecture"; exit 1 ;; \
+    esac && \
+    wget -qO /usr/bin/shm-check https://github.com/saghul/shm-check/releases/download/v1.0.0/shm-check-${SC_ARCH} && \
+    chmod +x /usr/bin/shm-check
 
 VOLUME /config

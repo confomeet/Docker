@@ -1,7 +1,7 @@
 local jwt = require "luajwtjitsi";
 local st = require "util.stanza";
 local async = require "util.async";
-local update_presence_identity = module:require "util".update_presence_identity;
+-- local update_presence_identity = module:require "util".update_presence_identity;
 
 local main_muc_component_config = module:get_option_string('main_muc');
 if main_muc_component_config == nil then

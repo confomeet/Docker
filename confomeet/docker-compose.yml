@@ -373,6 +373,19 @@ services:
         aliases:
           - ${XMPP_SERVER:-xmpp.meet.jitsi}
 
+  whiteboard:
+    build:
+      context: ./excalidraw-backend
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    #ports:
+      #- 9091
+      #- 3002
+    depends_on:
+      - prosody
+    networks:
+      - confomeetnet
+
 networks:
   confomeetnet:
     driver: bridge

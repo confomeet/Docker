@@ -9,8 +9,6 @@ services:
         ADMIN_FRONTEND_GIT_USER: ${ADMIN_FRONTEND_GIT_USER}
         ADMIN_FRONTEND_GIT_PASS: ${ADMIN_FRONTEND_GIT_PASS}
         ADMIN_BACKEND_BRANCH: ${ADMIN_BACKEND_BRANCH}
-      #ports:
-        #- '8081:80'
     environment:
       ConnectionStrings__DbConnection: ${ADMIN_DB_CONNECTION_STRING}
       Schema: ${ADMIN_DB_SCHEMA}

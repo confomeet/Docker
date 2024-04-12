@@ -11,7 +11,6 @@ services:
         ADMIN_BACKEND_BRANCH: ${ADMIN_BACKEND_BRANCH}
     environment:
       CONFOMEET_DB_CONNECTION_STRING: ${CONFOMEET_DB_CONNECTION_STRING}
-      DocumentStorage: ${ADMIN_DOCUMENT_STORAGE}
       Meeting__secret: ${PROSODY_APP_SECRET}
       Meeting__iss: ${ADMIN_MEETING_ISS}
       Meeting__aud: ${ADMIN_MEETING_AUD}
@@ -31,7 +30,6 @@ services:
       LockedTempTimeInMinutes: ${ADMIN_LOCKED_TEMP_TIME_IN_MINUTES}
       CurrentHostName: ${ADMIN_CURRENT_HOST_NAME}
       EnableRegistration: ${ADMIN_ENABLE_REGISTRATION}
-      EnableOnlyAdminLogin: ${ADMIN_ENABLE_ONLAY_ADMIN_LOGIN}
       OtpPeriodInMinutes: ${ADMIN_OTP_PERIOD_IN_MINUTES}
       CONFOMEET_ACTIVATE_ON_REGISTER: ${CONFOMEET_ACTIVATE_ON_REGISTER}
       YandexDisk__DebugToken: ${YANDEX_DISK_DEBUG_TOKEN}

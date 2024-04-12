@@ -33,7 +33,6 @@ services:
       CurrentHostName: ${ADMIN_CURRENT_HOST_NAME}
       EnableRegistration: ${ADMIN_ENABLE_REGISTRATION}
       EnableOnlyAdminLogin: ${ADMIN_ENABLE_ONLAY_ADMIN_LOGIN}
-      ProsodyDomain: ${CONFERENCE_PROSODY_DOMAIN}
       OtpPeriodInMinutes: ${ADMIN_OTP_PERIOD_IN_MINUTES}
       DisableActivate: ${ADMIN_DISABLE_ACTIVE}
       YandexDisk__DebugToken: ${YANDEX_DISK_DEBUG_TOKEN}

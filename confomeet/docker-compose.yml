@@ -10,8 +10,7 @@ services:
         ADMIN_FRONTEND_GIT_PASS: ${ADMIN_FRONTEND_GIT_PASS}
         ADMIN_BACKEND_BRANCH: ${ADMIN_BACKEND_BRANCH}
     environment:
-      ConnectionStrings__DbConnection: ${ADMIN_DB_CONNECTION_STRING}
-      Schema: ${ADMIN_DB_SCHEMA}
+      CONFOMEET_DB_CONNECTION_STRING: ${CONFOMEET_DB_CONNECTION_STRING}
       DocumentStorage: ${ADMIN_DOCUMENT_STORAGE}
       Meeting__secret: ${PROSODY_APP_SECRET}
       Meeting__iss: ${ADMIN_MEETING_ISS}

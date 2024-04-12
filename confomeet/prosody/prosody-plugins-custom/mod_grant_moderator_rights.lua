@@ -1,11 +1,9 @@
 -- Token moderation
--- this module looks for a field on incoming JWT tokens called "moderator". 
--- If it is true the user is added to the room as a moderator, otherwise they are set to a normal user.
+-- this module checks the claim session.confomeet_contex.moderator.
+-- If it is true the user is added to the room as an owner, otherwise user affiliation is set to member.
 -- Note this may well break other affiliation based features like banning or login-based admins
 local log = module._log;
 local jid_bare = require "util.jid".bare;
-local json = require "cjson";
-local basexx = require "basexx";
 local um_is_admin = require "core.usermanager".is_admin;
 
 local function is_admin(jid)
@@ -16,8 +14,11 @@ log('info', 'Loaded token moderation plugin');
 -- Hook into room creation to add this wrapper to every new room
 
 module:hook("muc-room-created", function(event)
-        log('info', 'room created, adding token moderation code');
-    
+        if string.match(event.room.jid, "jicofo[-]health[-]check") then
+            return
+        end
+
+        log('info', 'Room %s created, adding token moderation code', event.room.jid);
         local room = event.room
         local _set_affiliation = room.set_affiliation;
         room.set_affiliation = function(room, actor, jid, affiliation, reason);
@@ -36,30 +37,23 @@ module:hook("muc-room-created", function(event)
             end;
         end;
     end);
-    
-    
-    module:hook("muc-occupant-joined", function(event)
-        log('info', 'occupant joined, checking token for ownership');
-        setupAffiliation(event.room, event.origin, event.stanza);
-    end);
 
-function setupAffiliation(room, origin, stanza)
-  if origin.auth_token then
-          -- Extract token body and decode it
-          local dotFirst = origin.auth_token:find("%.");
-          if dotFirst then
-                  local dotSecond = origin.auth_token:sub(dotFirst + 1):find("%.");
-                  if dotSecond then
-                          local bodyB64 = origin.auth_token:sub(dotFirst + 1, dotFirst + dotSecond - 1);
-                          local body = json.decode(basexx.from_url64(bodyB64));
-                          local jid = jid_bare(stanza.attr.from);
-                          -- If user is a moderator or an admin, set their affiliation to be an owner
-                          if body["moderator"] == true or is_admin(jid) then
-                            room:set_affiliation("token_plugin", jid, "owner");
-                    else
-                            room:set_affiliation("token_plugin", jid, "member");
-                    end;
-            end;
-    end;
+local function on_muc_occupant_joined(event)
+    local room, session, occupant = event.room, event.origin, event.occupant;
+
+    if session.confomeet_context == nil then
+        log("debug", "Ignored muc-occupant-joined to %s because %s is not a confomeet participant", room.jid, occupant.jid);
+        return;
+    end
+
+    log('info', 'Confomeet occupant joined, checking moderator grant of %s (aka %s) in %s', occupant.jid, session.confomeet_context.participant_guid, room.jid);
+
+    local jid = jid_bare(event.stanza.attr.from);
+    if session.confomeet_context.moderator or is_admin(jid_bare(jid)) then
+        room:set_affiliation("token_plugin", jid, "owner");
+    else
+        room:set_affiliation("token_plugin", jid, "member");
+    end
 end;
-end;
+
+module:hook("muc-occupant-joined", on_muc_occupant_joined)

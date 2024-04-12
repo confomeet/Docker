@@ -1,135 +1,77 @@
+-- Moduld should be enabled in MUC component
+-- Component "conference.myevent33.ru" "muc"
+--     conference_logger_url = "http://backend:5000/api/v1/ConfEvent/AddProsodyEvent"
+--     modules_enabled = {
+--         "confomeet_context";
+--         "conf_http_log";
+--     }
+--
+-- Implementation relies on data injected to user session by confomeet_context module.
+--
+
 local http = require "net.http";
 local json = require "util.json";
 local timer = require "util.timer";
-local jwt = require "luajwtjitsi";
 local async = require "util.async";
-local url = module:get_option_string("conference_logger_url");
-assert(url, "Missing required config option 'conference_logger_url'");
+local jid_split = require "prosody.util.jid".prepped_split
+local conference_logger_url = module:get_option_string("conference_logger_url");
+assert(conference_logger_url, "Missing required config option 'conference_logger_url'");
 
-local focus_jid = module:get_option_string("focus_user_jid", "focus@auth.meet.jitsi");
-module:log("info","focus_jid             is            %s",focus_jid)
-module:log("info","conference_logger_url: %s",url)
+module:log("info", "Loading module conf_http_log with conference_logger_url='%s'", conference_logger_url)
 
+local PROSODY_EVENT_ROOM_CREATED = "room_created";
+local PROSODY_EVENT_OCCUPANT_JOINED = "occupant_joined";
+local PROSODY_EVENT_OCCUPANT_LEAVING = "occupant_leaving";
+local PROSODY_EVENT_ROOM_DESTROYED = "end_call_for_all";
+local PROSODY_EVENT_ROOM_FINISHED = "room_destroyed"
+local PROSODY_EVENT_USER_LEAVING_LOBBY = "occupant_leaving_lobby";
 
-local http_error_map = {
-    [0]   = { "cancel", "remote-server-timeout", "Connection failure" };
-    -- 4xx
-    [400] = { "modify", "bad-request" };
-    [401] = { "auth", "not-authorized" };
-    [402] = { "auth", "forbidden", "Payment required" };
-    [403] = { "auth", "forbidden" };
-    [404] = { "cancel", "item-not-found" };
-    [410] = { "cancel", "gone" };
-    -- 5xx
-    [500] = { "cancel", "internal-server-error" };
-    [501] = { "cancel", "feature-not-implemented" };
-    [502] = { "cancel", "remote-server-timeout", "Bad gateway" };
-    [503] = { "wait", "remote-server-timeout", "Service temporarily unavailable" };
-    [504] = { "wait", "remote-server-timeout", "Gateway timeout" };
-}
+local handle_stanza = nil;
 
-local function fetching_meeting_Id(event,type)
-    local meetingId;
-    local room = event.room;
+local function occupant_joined(event)
+    local room, session = event.room, event.origin;
 
-    if type == "occupant_joined" then
-        local occupant_auth_token = event.origin.auth_token;
-        if occupant_auth_token == nil then return end
-        local data, err = jwt.decode(occupant_auth_token);
-        meetingId = data.context.user.groupId;
-        return meetingId;
+    if session.confomeet_context == nil then
+        module:log("debug", "Ignored non confomeet occupant join: room=%s   jid=%s", room.jid, event.occupant.jid);
+        return
     end
-end
 
-
-function on_message_bare(event)
-    if event.stanza.attr.type == "error" then
-        return;
-    elseif event.stanza.attr.type == "groupchat" then
-        handle_stanza(event, event.stanza.attr.type);
-    else
-        handle_stanza(event, event.stanza.attr.type);
-    end
-end
-
-
-function on_message_full(event)
-    if event.stanza == nil then
-        --conf_log_message_event('nil_msg', '', '', tostring(event))
-    elseif event.stanza.attr.type == "error" then
-        return;
-    elseif event.stanza.attr.type == "groupchat" then
-        return;
-    elseif event.stanza.attr.type == "chat" then
-        handle_stanza(event, event.stanza.attr.type);
-    else
-        --conf_log_message_event('unknown_msg', '', '', tostring(event))
-    end
-end
-
-function occupant_joined(event)
-    local Id = fetching_meeting_Id(event,"occupant_joined");
-
-    local room = event.room;
+    local participant_guid = event.origin.confomeet_context.participant_guid;
+    local meeting_id = jid_split(event.room.jid)
+    module:log("info", "Processing muc-occupant-join of %s (aka %s) to %s", event.occupant.jid, participant_guid, room.jid);
 
     if room._data.persistent then
             return; -- Don't monitor persistent rooms
     end
 
-    local participant_count = 0;
+    local real_participants_count = 0;
 
     for _, occupant in room:each_occupant() do
             -- don't count jicofo's admin account (focus)
-            if string.sub(occupant.nick,-string.len("/focus")) ~= "/focus" then
-                    participant_count = participant_count + 1;
+            if string.sub(occupant.nick,-string.len("/focus")) ~= "/focus" and occupant.jid ~= event.occupant.jid then
+                    real_participants_count = real_participants_count + 1;
             end
     end
 
-    module:log("info", "occupant count before create %s", tostring(participant_count));
+    module:log("debug", "Real room participants count before join: %d", real_participants_count);
 
-        if participant_count == 1 and not string.match(tostring(event.stanza), "/focus") then
-
-            handle_stanza(event.stanza, "room_created",Id,"");
-            local wait, done = async.waiter();
-            timer.add_task(1, function ()
-                    done();
-            end);
-            wait();
-
-            handle_stanza(event.stanza, "occupant_joined",Id,"");
-
-
-        else
-            
-            if not string.match(tostring(event.stanza), "recorder@recorder") then
-
-                if string.sub(event.occupant.nick,-string.len("/focus")) ~= "/focus" then
-                   handle_stanza(event.stanza, "occupant_joined",Id,"");
-               end
-               
-            end
-        end
+    if real_participants_count == 1 and not string.match(tostring(event.stanza), "/focus") then
+        handle_stanza(event.stanza, PROSODY_EVENT_ROOM_CREATED, meeting_id);
+        -- FIXME: this needs to be replaces with some outgoing message queue.
+        local wait, done = async.waiter();
+        timer.add_task(1, function ()
+            done();
+        end);
+        wait();
+    end
+    handle_stanza(event.stanza, PROSODY_EVENT_OCCUPANT_JOINED, meeting_id, participant_guid);
 end
 
-
-function fetching_user_email(event)
-    local userEmail;
-    local room = event.room;
-
-        local occupant_auth_token = event.origin.auth_token;
-        if occupant_auth_token == nil then return end
-        local data, err = jwt.decode(occupant_auth_token);
-        userEmail = data.context.user.email;
-        return userEmail;
-end
-
-
-function handle_stanza(st, type,Id,email)
-
+handle_stanza = function(st, type, meeting_id, participant_guid)
     local message=tostring(st);
 
     if type == "occupant_leaving" or type == "room_destroyed" then
-    message= message..email;
+        message= message..participant_guid;
     end
 
     local request_body = json.encode({
@@ -137,89 +79,75 @@ function handle_stanza(st, type,Id,email)
         from = st.attr.from;
         kind = st.name;
         type = type;
-        meetingId = Id;
+        meetingId = meeting_id;
+        participang_guid = participant_guid;
         message = message;
     });
 
 
-    http.request(url, {
+    http.request(conference_logger_url, {
         body = request_body;
         headers = {
             ["Content-Type"] = "application/json";
         };
-    }, function (response_text, code, response)
-        module:log("info", "the  response_text is %s , and the code is %s ,  and the response is %s", response_text,code,response);
-     --   module:log("info", "the  request_body is %s ", request_body);
-        if st.attr.type == "error" then return; end -- Avoid error loops, don't reply to error stanzas
-        module:log("info", "Response code: %s", code );
-        if code == 200 and response_text and response.headers["content-type"] == "application/json" then
-            local response_data = json.decode(response_text);
-
-        elseif code >= 200 and code <= 299 then
+    }, function (response_body, code, response)
+        module:log("debug", "the  response_text is %s , and the code is %s ,  and the response is %s", response_body, code, response);
+        if code >= 200 and code <= 299 then
             return;
         else
-            -- module:send(error_reply(stanza, code));
+            local api_result = json.decode(response_body);
+            local error_details = "";
+            if api_result ~= nil and api_result.message ~= nil then
+                error_details = api_result.message;
+            end
+            module:log("warn", "Failed to save event %s  http status code=%d,  details=%s", type, code, error_details);
         end
-        return;
     end);
-    return;
 end
 
+local function occupant_pre_leave(event)
+    local room, session = event.room, event.origin;
 
+    if session.confomeet_context == nil then
+        module:log("debug", "Ignored non confomeet occupant join: room=%s   jid=%s", room.jid, event.occupant.jid);
+        return
+    end
 
-module:hook("muc-occupant-pre-leave", function(event)
+    local participant_guid = session.confomeet_context.participant_guid;
 
-    local room=event.room;
-    local str=event.stanza;
-    local occupant_auth_token = event.origin.auth_token;
-    if occupant_auth_token == nil then return end
-    local data, err = jwt.decode(occupant_auth_token);
-    local email= fetching_user_email(event);
+    module:log("info", "Processing muc-occupant-pre-leave of %s (aka %s) from %s", event.occupant.jid, participant_guid, room.jid);
 
+    local meeting_id = jid_split(room.jid);
 
-    local Id = data.context.user.groupId;
+    handle_stanza(event.stanza, PROSODY_EVENT_OCCUPANT_LEAVING, meeting_id, participant_guid)
 
-    if not string.match(tostring(event.stanza), "recorder@recorder") then
-        if string.sub(event.occupant.nick,-string.len("/focus")) ~= "/focus" then
+    if room._data.persistent then
+        return; -- Don't monitor persistent rooms
+    end
 
-            handle_stanza(str,"occupant_leaving",Id,email);
-
+    local participant_count = 0;
+    for _, occupant in room:each_occupant() do
+            -- don't count jicofo's admin account (focus)
+        local is_jicofo = string.sub(occupant.nick,-string.len("/focus")) == "/focus";
+        local is_jibri = string.match(tostring(occupant.bare_jid), "recorder@recorder");
+        if not is_jibri and not is_jicofo then
+                    participant_count = participant_count + 1;
         end
     end
 
-        if room._data.persistent then
-                    return; -- Don't monitor persistent rooms
-            end
+    module:log("debug", "occupant count before destroy %s", tostring(participant_count));
 
-        local participant_count = 0;
-        for _, occupant in room:each_occupant() do
-                -- don't count jicofo's admin account (focus)
-            if not string.match(tostring(occupant.bare_jid), "recorder@recorder") then
-                if string.sub(occupant.nick,-string.len("/focus")) ~= "/focus" then
-                        participant_count = participant_count + 1;
-                end
-            end
-        end
+    if participant_count ~= 1 then -- Leaving user is not a last real participant
+        return;
+    end;
 
-        module:log("info", "occupant count before destroy %s", tostring(participant_count));
+    local wait, done = async.waiter();
+    timer.add_task(1, function ()
+        done();
+    end);
+    wait();
+    handle_stanza(event.stanza, PROSODY_EVENT_ROOM_FINISHED, meeting_id, participant_guid);
+end
 
-            if participant_count ~= 1 then
-                    return;
-        end;
-
-        local wait, done = async.waiter();
-        timer.add_task(1, function ()
-            done();
-        end);
-        wait();
-        handle_stanza(str, "room_destroyed",Id,email);
-
-    end, -100);
-
---module:hook("message/bare", on_message_bare);
---module:hook("message/full", on_message_full);
---module:hook("muc-room-created", room_created, -100);
+module:hook("muc-occupant-pre-leave", occupant_pre_leave, -100);
 module:hook("muc-occupant-joined", occupant_joined, -100);
---module:hook("muc-occupant-pre-leave", occupant_leaving,-100);
---module:hook("muc-occupant-leave", occupant_leaving,-100);
---module:hook("muc-room-destroyed", room_destroyed,-100);

@@ -1,5 +1,4 @@
 local jid_bare = require 'util.jid'.bare;
-local jwt = require "luajwtjitsi";
 local jid_split = require 'util.jid'.split;
 
 module:log('info', 'AUTO LOBBY PLUGIN ENABLED');
@@ -28,11 +27,20 @@ end
 
 process_host_module(main_muc_component_config, function(host_module, host)
   host_module:hook('muc-room-created', function (event)
+    if string.find(event.room.jid, "jicofo[-]health[-]check") then
+      return;
+    end
     prosody.events.fire_event('create-lobby-room', event);
   end);
 
   host_module:hook('muc-occupant-pre-join', function (event)
-    local room = event.room;
+    local room, session = event.room, event.origin;
+
+    if event.origin.confomeet_context == nil then
+      module:log("debug", "Ignored non confomeet participant joining the room='%s' jid='%s'", room.jid, event.occupant.jid);
+      return
+    end
+
     local invitee = event.stanza.attr.from;
     local invitee_bare_jid = jid_bare(invitee);
 
@@ -43,11 +51,6 @@ process_host_module(main_muc_component_config, function(host_module, host)
     if whitelist:contains(invitee_domain) or whitelist:contains(invitee_bare_jid) then
         whitelistJoin = true;
     end
-
-    --[[local password = join:get_child_text('password', MUC_NS);
-    if password and room:get_password() and password == room:get_password() then
-        whitelistJoin = true;
-    end]]
 
     if whitelistJoin then
         local affiliation = room:get_affiliation(invitee);
@@ -62,9 +65,7 @@ process_host_module(main_muc_component_config, function(host_module, host)
     local occupant_auth_token = event.origin.auth_token;
     if occupant_auth_token == nil then return end
 
-    local data, err = jwt.decode(occupant_auth_token);
-
-    if not data.moderator and data.autoLobby then return end
+    if not session.confomeet_context.moderator and session.confomeet_context.autoLobby then return end
 
     local affiliation = room:get_affiliation(invitee);
 

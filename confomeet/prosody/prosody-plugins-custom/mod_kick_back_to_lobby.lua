@@ -2,8 +2,6 @@ local jid_split = require 'util.jid'.split;
 local jid_bare = require 'util.jid'.bare;
 local json = require 'util.json';
 local st = require 'util.stanza';
-local jwt = require "luajwtjitsi";
-local focus_jid = module:get_option_string("focus_user_jid", "focus@auth.meet.jitsi");
 local whitelist = module:get_option_set('muc_lobby_whitelist', {});
 local t = {}
 local main_muc_service
@@ -14,30 +12,11 @@ if main_muc_component_config == nil then
 end
 
 local http = require "net.http";
-local timer = require "util.timer";
-local async = require "util.async";
 local url = module:get_option_string("conference_logger_url");
 assert(url, "Missing required config option 'conference_logger_url'");
-local focus_jid = module:get_option_string("focus_user_jid", "focus@auth.meet.jitsi");
+local focus_jid = module:get_option_string("focus_user_jid", "focus@auth.event33.ru");
 module:log("info","focus_jid             is            %s",focus_jid)
 module:log("info","conference_logger_url: %s",url)
-
-local http_error_map = {
-  [0]   = { "cancel", "remote-server-timeout", "Connection failure" };
-  -- 4xx
-  [400] = { "modify", "bad-request" };
-  [401] = { "auth", "not-authorized" };
-  [402] = { "auth", "forbidden", "Payment required" };
-  [403] = { "auth", "forbidden" };
-  [404] = { "cancel", "item-not-found" };
-  [410] = { "cancel", "gone" };
-  -- 5xx
-  [500] = { "cancel", "internal-server-error" };
-  [501] = { "cancel", "feature-not-implemented" };
-  [502] = { "cancel", "remote-server-timeout", "Bad gateway" };
-  [503] = { "wait", "remote-server-timeout", "Service temporarily unavailable" };
-  [504] = { "wait", "remote-server-timeout", "Gateway timeout" };
-}
 
 function is_owner_present(event)
   local mods = event.room:each_affiliation("owner");
@@ -210,6 +189,10 @@ process_host_module(main_muc_component_config, function(host_module, host)
     local _, invitee_domain = jid_split(invitee);
     local whitelistJoin = false;
 
+    if event.origin.confomeet_context == nil then
+      return
+    end
+
     -- whitelist participants
     if whitelist:contains(invitee_domain) or whitelist:contains(invitee_bare_jid) then
         whitelistJoin = true;
@@ -232,10 +215,10 @@ process_host_module(main_muc_component_config, function(host_module, host)
 
     local occupant_auth_token = event.origin.auth_token;
     if occupant_auth_token == nil then return end
-    local data, err = jwt.decode(occupant_auth_token);
-    local occupant_uuid = data.context.user.id
+    local data = event.origin.confomeet_context;
+    local occupant_uuid = data.participant_guid;
     local affiliation = room:get_affiliation(invitee);
-    local user_groupId =  data.context.user.groupId
+    local user_groupId =  data.user_groupId;
     for k,v in pairs(t) do
       if occupant_uuid == v.userid and user_groupId == v.roomid and data.moderator ==false then
         --   print('\t',v,occupant_uuid,v.roomid)
@@ -268,9 +251,9 @@ process_host_module(main_muc_component_config, function(host_module, host)
   host_module:hook('muc-occupant-joined', function (event)
     local occupant_auth_token = event.origin.auth_token;
     if occupant_auth_token == nil then return end
-    local data, err = jwt.decode(occupant_auth_token);
-    local occupant_uuid = data.context.user.id
-    local user_groupId =  data.context.user.groupId
+    local data = event.origin.confomeet_context;
+    local occupant_uuid = data.participant_guid;
+    local user_groupId =  data.user_groupId;
     --    local affiliation = room:get_affiliation(invitee);
     for k,v in pairs(t) do
       if occupant_uuid == v.userid and user_groupId == v.roomid then

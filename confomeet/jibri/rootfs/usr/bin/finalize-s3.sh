@@ -33,6 +33,11 @@ MEETING_ID=$(cut -d'_' -f1 <<< $VIDEO_FILE_NAME)
 echo "Uploading recording at ${VIDEO_FILE_PATH} of ${PRETTY_FILE_SIZE} to s3://${CONFOMEET_S3_BUCKET}/${VIDEO_FILE_NAME}"
 aws --endpoint-url="$CONFOMEET_S3_URL" s3 cp "$VIDEO_FILE_PATH" "s3://${CONFOMEET_S3_BUCKET}/${VIDEO_FILE_NAME}"
 
+if [ ! "0" -eq "$?" ]; then
+	echo "Uploading file to S3 storage failed"
+	exit 1
+fi
+
 generate_post_request_body()
 {
 	cat <<-EOF
@@ -53,3 +58,9 @@ curl \
 	-X POST \
 	--data "$(generate_post_request_body)" \
 	"http://$XMPP_DOMAIN/meet/api/v1/Recording/AddS3VideoRecording"
+
+if [ "0" -eq "$?" ]; then
+	echo "Removing '$VIDEO_FILE_PATH' it is uploaded to S3 and backend is notified"
+	rm "$VIDEO_FILE_PATH"
+fi
+

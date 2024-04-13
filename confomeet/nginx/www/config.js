@@ -599,12 +599,12 @@ var config = {
     // },
 
     // Configs for the security related UI elements.
-    // securityUi: {
+    securityUi: {
     //     // Hides the lobby button. Replaces `hideLobbyButton`.
     //     hideLobbyButton: false,
     //     // Hides the possibility to set and enter a lobby password.
-    //     disableLobbyPassword: false,
-    // },
+         disableLobbyPassword: true;
+    },
 
     // Disable app shortcuts that are registered upon joining a conference
     // disableShortcuts: false,

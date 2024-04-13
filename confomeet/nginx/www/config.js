@@ -603,7 +603,7 @@ var config = {
     //     // Hides the lobby button. Replaces `hideLobbyButton`.
     //     hideLobbyButton: false,
     //     // Hides the possibility to set and enter a lobby password.
-         disableLobbyPassword: true;
+         disableLobbyPassword: true,
     },
 
     // Disable app shortcuts that are registered upon joining a conference

@@ -1,0 +1,145 @@
+version: '3'
+
+services:
+  jicofo:
+    build:
+      context: ./jicofo
+      dockerfile: ./Dockerfile
+      args:
+        XMPP_DOMAIN: ${XMPP_DOMAIN}
+        TZ: ${TZ}
+        JICOFO_AUTH_PASSWORD: ${JICOFO_AUTH_PASSWORD}
+    depends_on:
+      - prosody
+    networks:
+      - jitsinet
+    restart: unless-stopped
+
+  whiteboard:
+    build:
+      context: ./excalidraw-backend
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    #ports:
+      #- 9091
+      #- 3002
+    depends_on:
+      - prosody
+    networks:
+      - jitsinet
+
+  etherpad:
+    build:
+      context: ./etherpad
+      dockerfile: ./Dockerfile
+    environment:
+        - TITLE=${ETHERPAD_TITLE}
+        - DEFAULT_PAD_TEXT=${ETHERPAD_DEFAULT_PAD_TEXT}
+        - SKIN_NAME=${ETHERPAD_SKIN_NAME}
+        - SKIN_VARIANTS=${ETHERPAD_SKIN_VARIANTS}
+    restart: unless-stopped
+    depends_on:
+      - prosody
+    #ports:
+      #- 9001
+    networks:
+      - jitsinet
+
+  prosody:
+    build:
+      context: ./prosody
+      dockerfile: ./Dockerfile
+      args:
+        XMPP_DOMAIN: ${XMPP_DOMAIN}
+        PROSODY_ACCEPTED_ISSUERS: ${PROSODY_ACCEPTED_ISSUERS}
+        PROSODY_ACCEPTED_AUDIENCES: ${PROSODY_ACCEPTED_AUDIENCES}
+        PROSODY_APP_ID: ${PROSODY_APP_ID}
+        PROSODY_APP_SECRET: ${PROSODY_APP_SECRET}
+        JICOFO_AUTH_PASSWORD: ${JICOFO_AUTH_PASSWORD}
+        JVB_USERNAME: ${JVB_USERNAME}
+        JVB_AUTH_PASS: ${JVB_AUTH_PASS}
+        JIBRI_RECORDER_PASSWORD: ${JIBRI_RECORDER_PASSWORD}
+        JIBRI_XMPP_PASSWORD: ${JIBRI_XMPP_PASSWORD}
+        JIGASI_XMPP_USER: ${JIGASI_XMPP_USER}
+        JIGASI_XMPP_PASSWORD: ${JIGASI_XMPP_PASSWORD}
+
+    extra_hosts:
+      - '${XMPP_DOMAIN}:127.0.0.1'
+    #volumes:
+      #- ./log:/var/log/prosody
+    networks:
+      - jitsinet
+    ports:
+      - '5222:5222'
+      - '5280:5280'
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: ./Dockerfile
+      args:
+        XMPP_DOMAIN: ${XMPP_DOMAIN}
+        ADMIN_FRONTEND_GIT_USER: ${ADMIN_FRONTEND_GIT_USER}
+        ADMIN_FRONTEND_GIT_PASS: ${ADMIN_FRONTEND_GIT_PASS}
+        ADMIN_FRONTEND_BRANCH: ${ADMIN_FRONTEND_BRANCH}
+        CCMS_BASE_URL: ${CCMS_BASE_URL}
+    depends_on:
+      - prosody
+      - admin_backend
+      - etherpad
+      - whiteboard
+      - jicofo
+    ports:
+      - '80:80'
+      - '443:443'
+    networks:
+      - jitsinet
+    restart: unless-stopped
+
+  admin_backend:
+    build:
+      context: ./admin_backend
+      dockerfile: ./Dockerfile
+      args:
+        ADMIN_FRONTEND_GIT_USER: ${ADMIN_FRONTEND_GIT_USER}
+        ADMIN_FRONTEND_GIT_PASS: ${ADMIN_FRONTEND_GIT_PASS}
+        ADMIN_BACKEND_BRANCH: ${ADMIN_BACKEND_BRANCH}
+    #ports:
+      #- '8081:80'
+    environment:
+      ConnectionStrings__DbConnection: User ID =${ADMIN_DB_USER_ID};Password=${ADMIN_DB_USER_PASSWORD};Server=${ADMIN_DB_HOST};Port=${ADMIN_DB_PORT};Database=${ADMIN_DB_DATABASE}; Integrated Security=true;Pooling=true;
+      Schema: ${ADMIN_DB_SCHEMA}
+      DocumentStorage: ${ADMIN_DOCUMENT_STORAGE}
+      Meeting__secret: ${PROSODY_APP_SECRET}
+      Meeting__iss: ${ADMIN_MEETING_ISS}
+      Meeting__aud: ${ADMIN_MEETING_AUD}
+      Meeting__host: https://${XMPP_DOMAIN}
+      Meeting__sub: ${XMPP_DOMAIN}
+      Jwt__Key: ${ADMIN_JWT_KEY}
+      Jwt__Issuer: ${ADMIN_JWT_ISSUER}
+      Jwt__Audience: ${ADMIN_JWT_AUDIENCE}
+      Jwt__TokenInMinutes: ${ADMIN_JWT_TOKENINMINUTES}
+      ChannelMailFirstSetting__Mail: ${ADMIN_MAIL_MAIL}
+      ChannelMailFirstSetting__DisplayName: ${ADMIN_MAIL_DISPLAYNAME}
+      ChannelMailFirstSetting__Password: ${ADMIN_MAIL_PASSWORD}
+      ChannelMailFirstSetting__Host: ${ADMIN_MAIL_HOST}
+      ChannelMailFirstSetting__Port: ${ADMIN_MAIL_PORT}
+      GoogleReCaptchaSecretKey__SecretKey: ${ADMIN_CAPTCHA_SECRET_KEY}
+      PassworLifetimeDays: ${ADMIN_PASSWORD_LIFE_TIME_DAYS}
+      LockedTempTimeInMinutes: ${ADMIN_LOCKED_TEMP_TIME_IN_MINUTES}
+      AllowedHosts: ${ADMIN_ALLOW_HOSTS}
+      CurrentHostName: ${ADMIN_CURRENT_HOST_NAME}
+      CONF_URL_PREFIX: ${ADMIN_CONF_URL_PREFIX}
+      EnableImmediatelyJob: ${ADMIN_ENABLE_IMMEDIATELY_JOB}
+      EnableRegistration: ${ADMIN_ENABLE_REGISTRATION}
+      EnableOnlyAdminLogin: ${ADMIN_ENABLE_ONLAY_ADMIN_LOGIN}
+      ProsodyDomain: ${CONFERENCE_PROSODY_DOMAIN}
+      OtpPeriodInMinutes: ${ADMIN_OTP_PERIOD_IN_MINUTES}
+      DisableActivate: ${ADMIN_DISABLE_ACTIVE}
+    networks:
+      - jitsinet
+    restart: unless-stopped
+networks:
+  jitsinet:
+    driver: bridge

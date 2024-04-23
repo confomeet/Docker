@@ -1,0 +1,14 @@
+[
+    {
+        "id": "1002@jitsi.local",
+        "name": "1002",
+        "type": "videosipgw",
+        "avatar": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/GNOME_Video_icon_2019.svg/128px-GNOME_Video_icon_2019.svg.png"
+    },
+    {
+        "id": "1003@jitsi.local",
+        "name": "1003",
+        "type": "videosipgw",
+        "avatar": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/GNOME_Video_icon_2019.svg/128px-GNOME_Video_icon_2019.svg.png"
+    }
+]
